@@ -1,0 +1,43 @@
+# Data files
+*.csv
+*.npy
+*.db
+*.sqlite
+*.sqlite3
+
+# Raw datasets
+booksummaries/
+books_1.Best_Books_Ever.csv
+project/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+venv/
+backend_env/
+*.egg-info/
+.eggs/
+
+# Node
+node_modules/
+.next/
+out/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Env
+.env
+.env.local
+
+# Claude
+.claude/
+
+# Misc
+pyvenv.cfg
