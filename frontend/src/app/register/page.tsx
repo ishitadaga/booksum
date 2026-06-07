@@ -21,7 +21,7 @@ export default function RegisterPage() {
     setLoading(true);
     try {
       const data = await register(username, email, password, displayName || undefined);
-      setAuth(data.access_token, data.user);
+      setAuth(data.user);
       router.push("/");
     } catch (err: any) {
       setError(err?.response?.data?.detail || "Registration failed");
@@ -66,7 +66,7 @@ export default function RegisterPage() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
-          minLength={6}
+          minLength={8}
           className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
         />
         <button

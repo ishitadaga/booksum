@@ -3,6 +3,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Suspense } from "react";
 import SimilarityGraph from "@/components/SimilarityGraph";
+import type { SimilarityGraphHandle } from "@/components/SimilarityGraph";
 import GraphControls from "@/components/GraphControls";
 import GenreLegend from "@/components/GenreLegend";
 import BookDetailSidebar from "@/components/BookDetailSidebar";
@@ -13,20 +14,34 @@ import type { GraphNode } from "@/lib/types";
 function GraphPageInner() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { graph, loading, error, loadGraph } = useGraph();
+  const { graph, loading, error, loadGraph, expandNode, expanding } = useGraph();
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
   const [topN, setTopN] = useState(20);
-  const [minSimilarity, setMinSimilarity] = useState(0.3);
-  const cyRef = useRef<any>(null);
+  const [minSimilarity, setMinSimilarity] = useState(0.2);
+  const graphRef = useRef<SimilarityGraphHandle>(null);
 
   const bookId = searchParams.get("book_id");
 
+  // Debounce slider values so dragging doesn't fire dozens of API calls
+  const [debouncedTopN, setDebouncedTopN] = useState(topN);
+  const [debouncedMinSim, setDebouncedMinSim] = useState(minSimilarity);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedTopN(topN), 400);
+    return () => clearTimeout(timer);
+  }, [topN]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedMinSim(minSimilarity), 400);
+    return () => clearTimeout(timer);
+  }, [minSimilarity]);
+
   useEffect(() => {
     if (bookId) {
-      loadGraph(bookId, topN, minSimilarity);
+      loadGraph(bookId, debouncedTopN, debouncedMinSim);
       setSelectedNode(null);
     }
-  }, [bookId, topN, minSimilarity, loadGraph]);
+  }, [bookId, debouncedTopN, debouncedMinSim, loadGraph]);
 
   const handleNodeClick = useCallback((node: GraphNode) => {
     setSelectedNode(node);
@@ -39,19 +54,32 @@ function GraphPageInner() {
     [router]
   );
 
-  const handleResetLayout = useCallback(() => {
-    cyRef.current
-      ?.layout({
-        name: "cose-bilkent",
-        animate: true,
-        animationDuration: 800,
-        nodeRepulsion: 8000,
-        idealEdgeLength: 120,
-        fit: true,
-        padding: 40,
-      })
-      .run();
+  const handleDeselect = useCallback(() => {
+    setSelectedNode(null);
   }, []);
+
+  const handleResetLayout = useCallback(() => {
+    graphRef.current?.runLayout();
+  }, []);
+
+  const handleZoomIn = useCallback(() => {
+    const cy = graphRef.current?.cy;
+    if (cy) cy.zoom({ level: cy.zoom() * 1.3, renderedPosition: { x: cy.width() / 2, y: cy.height() / 2 } });
+  }, []);
+
+  const handleZoomOut = useCallback(() => {
+    const cy = graphRef.current?.cy;
+    if (cy) cy.zoom({ level: cy.zoom() / 1.3, renderedPosition: { x: cy.width() / 2, y: cy.height() / 2 } });
+  }, []);
+
+  const handleExpandNode = useCallback(
+    (nodeId: string) => {
+      if (!graph) return;
+      const existingIds = [graph.center_book.id, ...graph.nodes.map((n) => n.id)];
+      expandNode(nodeId, existingIds, topN, minSimilarity);
+    },
+    [graph, expandNode, topN, minSimilarity]
+  );
 
   if (!bookId) {
     return (
@@ -90,10 +118,22 @@ function GraphPageInner() {
 
         {graph && !loading && (
           <SimilarityGraph
+            ref={graphRef}
             graph={graph}
             onNodeClick={handleNodeClick}
             onNodeDoubleClick={handleNodeDoubleClick}
+            onDeselect={handleDeselect}
           />
+        )}
+
+        {/* Expanding overlay */}
+        {expanding && (
+          <div className="absolute inset-0 flex items-center justify-center bg-gray-900/50 z-10 pointer-events-none">
+            <div className="text-center">
+              <div className="w-10 h-10 border-4 border-gray-600 border-t-green-500 rounded-full animate-spin mx-auto mb-2" />
+              <p className="text-gray-300 text-sm">Expanding graph...</p>
+            </div>
+          </div>
         )}
 
         {/* Top search bar overlay */}
@@ -109,8 +149,8 @@ function GraphPageInner() {
             minSimilarity={minSimilarity}
             setMinSimilarity={setMinSimilarity}
             onResetLayout={handleResetLayout}
-            onZoomIn={() => cyRef.current?.zoom(cyRef.current.zoom() * 1.3)}
-            onZoomOut={() => cyRef.current?.zoom(cyRef.current.zoom() / 1.3)}
+            onZoomIn={handleZoomIn}
+            onZoomOut={handleZoomOut}
           />
         </div>
 
@@ -131,6 +171,8 @@ function GraphPageInner() {
           node={selectedNode}
           onClose={() => setSelectedNode(null)}
           onFindSimilar={handleNodeDoubleClick}
+          onExpandNode={handleExpandNode}
+          isExpanding={expanding}
         />
       </div>
 

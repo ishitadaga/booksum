@@ -7,9 +7,11 @@ interface Props {
   onClose: () => void;
   onFindSimilar: (bookId: string) => void;
   onAddToPlaylist?: (bookId: string) => void;
+  onExpandNode?: (bookId: string) => void;
+  isExpanding?: boolean;
 }
 
-export default function BookDetailSidebar({ node, onClose, onFindSimilar, onAddToPlaylist }: Props) {
+export default function BookDetailSidebar({ node, onClose, onFindSimilar, onAddToPlaylist, onExpandNode, isExpanding }: Props) {
   if (!node) return null;
 
   const genreColor = GENRE_COLORS[node.genre || ""] || "#666";
@@ -84,6 +86,15 @@ export default function BookDetailSidebar({ node, onClose, onFindSimilar, onAddT
             className="flex-1 text-xs bg-blue-600 hover:bg-blue-500 text-white py-2 rounded-lg transition font-medium"
           >
             Find Similar
+          </button>
+        )}
+        {onExpandNode && (
+          <button
+            onClick={() => onExpandNode(node.id)}
+            disabled={isExpanding}
+            className="flex-1 text-xs bg-green-700 hover:bg-green-600 disabled:bg-green-900 disabled:text-green-400 text-white py-2 rounded-lg transition font-medium"
+          >
+            {isExpanding ? "Expanding..." : "Expand Graph"}
           </button>
         )}
         {onAddToPlaylist && (

@@ -11,18 +11,23 @@ import type {
   FeedItem,
 } from "./types";
 
-const api = axios.create({ baseURL: API_URL });
+const api = axios.create({ baseURL: API_URL, withCredentials: true });
 
-// Attach JWT token to requests
-api.interceptors.request.use((config) => {
-  if (typeof window !== "undefined") {
-    const token = localStorage.getItem("token");
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+// Redirect to login on 401 (expired/invalid cookie)
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (
+      error.response?.status === 401 &&
+      typeof window !== "undefined" &&
+      !window.location.pathname.startsWith("/login") &&
+      !window.location.pathname.startsWith("/register")
+    ) {
+      window.location.href = "/login";
     }
+    return Promise.reject(error);
   }
-  return config;
-});
+);
 
 // Books
 export async function searchBooks(q: string, limit = 20): Promise<BookSearchResult> {
@@ -43,6 +48,23 @@ export async function getSimilarityGraph(
 ): Promise<GraphResponse> {
   const { data } = await api.get("/api/graph/similarity", {
     params: { book_id: bookId, top_n: topN, min_similarity: minSimilarity },
+  });
+  return data;
+}
+
+export async function expandGraphNode(
+  bookId: string,
+  existingIds: string[],
+  topN = 10,
+  minSimilarity = 0.2
+): Promise<GraphResponse> {
+  const { data } = await api.get("/api/graph/similarity/expand", {
+    params: {
+      book_id: bookId,
+      existing_ids: existingIds.join(","),
+      top_n: topN,
+      min_similarity: minSimilarity,
+    },
   });
   return data;
 }
@@ -71,6 +93,10 @@ export async function login(username: string, password: string): Promise<AuthRes
 export async function getMe(): Promise<User> {
   const { data } = await api.get("/api/auth/me");
   return data;
+}
+
+export async function logoutApi(): Promise<void> {
+  await api.post("/api/auth/logout");
 }
 
 // Playlists

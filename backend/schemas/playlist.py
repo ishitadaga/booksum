@@ -28,6 +28,7 @@ class PlaylistOut(BaseModel):
     updated_at: datetime | None = None
     username: str | None = None
     book_count: int = 0
+    preview_covers: list[str] = []
 
 
 class PlaylistDetailOut(PlaylistOut):

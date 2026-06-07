@@ -1,119 +1,144 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { usePlaylists } from "@/hooks/usePlaylists";
 import PlaylistCard from "@/components/PlaylistCard";
-import { GENRES } from "@/lib/constants";
+import GenreSidebar from "@/components/GenreSidebar";
+import CreatePlaylistModal from "@/components/CreatePlaylistModal";
+
+type SortOption = "newest" | "most_books" | "a_z";
 
 export default function PlaylistsPage() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  const router = useRouter();
   const { playlists, loading, fetchPlaylists, create } = usePlaylists();
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push("/login");
+    }
+  }, [authLoading, user, router]);
   const [selectedGenre, setSelectedGenre] = useState<string | undefined>();
   const [showCreate, setShowCreate] = useState(false);
-  const [newName, setNewName] = useState("");
-  const [newGenre, setNewGenre] = useState("");
-  const [newDesc, setNewDesc] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState<SortOption>("newest");
 
   useEffect(() => {
     fetchPlaylists(selectedGenre ? { genre: selectedGenre } : undefined);
   }, [selectedGenre, fetchPlaylists]);
 
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newName.trim()) return;
-    await create({ name: newName, genre: newGenre || undefined, description: newDesc || undefined });
-    setNewName("");
-    setNewGenre("");
-    setNewDesc("");
+  const handleCreate = async (data: { name: string; genre?: string; description?: string }) => {
+    await create(data);
     setShowCreate(false);
     fetchPlaylists(selectedGenre ? { genre: selectedGenre } : undefined);
   };
 
+  const filteredAndSorted = useMemo(() => {
+    let result = playlists;
+
+    // Client-side search filter
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter((p) => p.name.toLowerCase().includes(query));
+    }
+
+    // Client-side sort
+    result = [...result].sort((a, b) => {
+      switch (sortBy) {
+        case "newest":
+          return (b.updated_at || "").localeCompare(a.updated_at || "");
+        case "most_books":
+          return b.book_count - a.book_count;
+        case "a_z":
+          return a.name.localeCompare(b.name);
+        default:
+          return 0;
+      }
+    });
+
+    return result;
+  }, [playlists, searchQuery, sortBy]);
+
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-white">Playlists</h1>
-        {user && (
-          <button
-            onClick={() => setShowCreate(!showCreate)}
-            className="text-sm bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg transition"
-          >
-            {showCreate ? "Cancel" : "Create Playlist"}
-          </button>
-        )}
+    <div className="max-w-6xl mx-auto px-4 py-8">
+      <div className="flex gap-8">
+        {/* Genre sidebar */}
+        <GenreSidebar selected={selectedGenre} onSelect={setSelectedGenre} />
+
+        {/* Main content */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-3 mb-6">
+            {/* Search bar */}
+            <div className="flex-1 relative">
+              <svg
+                className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                />
+              </svg>
+              <input
+                type="text"
+                placeholder="Search playlists..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 text-sm"
+              />
+            </div>
+
+            {/* Sort dropdown */}
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as SortOption)}
+              className="px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-gray-300 text-sm focus:outline-none focus:border-blue-500"
+            >
+              <option value="newest">Newest</option>
+              <option value="most_books">Most Books</option>
+              <option value="a_z">A–Z</option>
+            </select>
+
+            {/* Create button */}
+            {user && (
+              <button
+                onClick={() => setShowCreate(true)}
+                className="text-sm bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg transition whitespace-nowrap"
+              >
+                Create Playlist
+              </button>
+            )}
+          </div>
+
+          {/* Playlist grid */}
+          {loading ? (
+            <div className="text-center py-12">
+              <div className="w-8 h-8 border-2 border-gray-600 border-t-blue-500 rounded-full animate-spin mx-auto" />
+            </div>
+          ) : filteredAndSorted.length === 0 ? (
+            <p className="text-gray-500 text-center py-12">No playlists found</p>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {filteredAndSorted.map((p) => (
+                <PlaylistCard key={p.id} playlist={p} />
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
+      {/* Create playlist modal */}
       {showCreate && (
-        <form onSubmit={handleCreate} className="bg-gray-800 border border-gray-700 rounded-xl p-4 mb-6 space-y-3">
-          <input
-            type="text"
-            placeholder="Playlist name"
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            required
-            className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 text-sm"
-          />
-          <select
-            value={newGenre}
-            onChange={(e) => setNewGenre(e.target.value)}
-            className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm focus:outline-none focus:border-blue-500"
-          >
-            <option value="">Select genre (optional)</option>
-            {GENRES.map((g) => (
-              <option key={g} value={g}>{g}</option>
-            ))}
-          </select>
-          <textarea
-            placeholder="Description (optional)"
-            value={newDesc}
-            onChange={(e) => setNewDesc(e.target.value)}
-            rows={2}
-            className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 text-sm"
-          />
-          <button
-            type="submit"
-            className="text-sm bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg transition"
-          >
-            Create
-          </button>
-        </form>
-      )}
-
-      {/* Genre filter */}
-      <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
-        <button
-          onClick={() => setSelectedGenre(undefined)}
-          className={`text-xs px-3 py-1.5 rounded-full whitespace-nowrap transition ${
-            !selectedGenre ? "bg-blue-600 text-white" : "bg-gray-800 text-gray-400 hover:bg-gray-700"
-          }`}
-        >
-          All
-        </button>
-        {GENRES.map((g) => (
-          <button
-            key={g}
-            onClick={() => setSelectedGenre(g)}
-            className={`text-xs px-3 py-1.5 rounded-full whitespace-nowrap transition ${
-              selectedGenre === g ? "bg-blue-600 text-white" : "bg-gray-800 text-gray-400 hover:bg-gray-700"
-            }`}
-          >
-            {g}
-          </button>
-        ))}
-      </div>
-
-      {loading ? (
-        <div className="text-center py-12">
-          <div className="w-8 h-8 border-2 border-gray-600 border-t-blue-500 rounded-full animate-spin mx-auto" />
-        </div>
-      ) : playlists.length === 0 ? (
-        <p className="text-gray-500 text-center py-12">No playlists found</p>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {playlists.map((p) => (
-            <PlaylistCard key={p.id} playlist={p} />
-          ))}
-        </div>
+        <CreatePlaylistModal
+          onClose={() => setShowCreate(false)}
+          onCreate={handleCreate}
+        />
       )}
     </div>
   );

@@ -1,5 +1,5 @@
 """Generate embeddings for all books with descriptions.
-Saves as float16 .npy files (~51MB for 70k books).
+Saves as float16 .npy files (~49MB for 70k books with 384-dim model).
 """
 import numpy as np
 import pandas as pd
@@ -28,12 +28,14 @@ def main():
 
     book_ids = df_embed['book_id'].values.astype(str)
     descriptions = df_embed['description'].fillna('').values.tolist()
-
-    # Prepend title + author for better embeddings
     titles = df_embed['title'].fillna('').values.tolist()
     authors = df_embed['author'].fillna('').values.tolist()
+    genres = df_embed['genres'].fillna('').values.tolist()
+
+    # Description-first format with genre tag for better semantic matching
     texts = [
-        f"{t} by {a}. {d}" for t, a, d in zip(titles, authors, descriptions)
+        f"{d} | Genre: {g} | {t} by {a}"
+        for d, g, t, a in zip(descriptions, genres, titles, authors)
     ]
 
     print(f"\nLoading model: {MODEL_NAME}...")

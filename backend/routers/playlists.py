@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
+from sqlalchemy.exc import IntegrityError
 
 from backend.database import get_db
 from backend.models.user import User
@@ -36,6 +37,7 @@ async def create_playlist(
         genre=playlist.genre, description=playlist.description,
         is_public=playlist.is_public, created_at=playlist.created_at,
         updated_at=playlist.updated_at, username=user.username, book_count=0,
+        preview_covers=[],
     )
 
 
@@ -43,7 +45,7 @@ async def create_playlist(
 async def list_playlists(
     user_id: int | None = Query(None),
     genre: str | None = Query(None),
-    current_user: User | None = Depends(get_optional_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     query = select(Playlist, User.username).join(User, User.id == Playlist.user_id)
@@ -63,18 +65,52 @@ async def list_playlists(
     result = await db.execute(query)
     rows = result.all()
 
+    if not rows:
+        return []
+
+    playlist_ids = [playlist.id for playlist, _ in rows]
+
+    # Batch: book counts per playlist (1 query instead of N)
+    count_result = await db.execute(
+        select(PlaylistBook.playlist_id, func.count())
+        .where(PlaylistBook.playlist_id.in_(playlist_ids))
+        .group_by(PlaylistBook.playlist_id)
+    )
+    count_map = dict(count_result.all())
+
+    # Batch: preview covers per playlist (1 query instead of N)
+    # Use a window function to rank covers within each playlist
+    from sqlalchemy import over, literal_column
+    cover_query = (
+        select(
+            PlaylistBook.playlist_id,
+            Book.cover_img,
+            func.row_number().over(
+                partition_by=PlaylistBook.playlist_id,
+                order_by=PlaylistBook.position,
+            ).label("rn"),
+        )
+        .join(Book, PlaylistBook.book_id == Book.book_id)
+        .where(PlaylistBook.playlist_id.in_(playlist_ids))
+        .where(Book.cover_img.isnot(None))
+    ).subquery()
+    covers_result = await db.execute(
+        select(cover_query.c.playlist_id, cover_query.c.cover_img)
+        .where(cover_query.c.rn <= 4)
+    )
+    covers_map: dict[int, list[str]] = {}
+    for pid, cover in covers_result.all():
+        covers_map.setdefault(pid, []).append(cover)
+
     playlists = []
     for playlist, username in rows:
-        # Get book count
-        count_result = await db.execute(
-            select(func.count()).where(PlaylistBook.playlist_id == playlist.id)
-        )
-        book_count = count_result.scalar() or 0
         playlists.append(PlaylistOut(
             id=playlist.id, user_id=playlist.user_id, name=playlist.name,
             genre=playlist.genre, description=playlist.description,
             is_public=playlist.is_public, created_at=playlist.created_at,
-            updated_at=playlist.updated_at, username=username, book_count=book_count,
+            updated_at=playlist.updated_at, username=username,
+            book_count=count_map.get(playlist.id, 0),
+            preview_covers=covers_map.get(playlist.id, []),
         ))
     return playlists
 
@@ -82,7 +118,7 @@ async def list_playlists(
 @router.get("/{playlist_id}", response_model=PlaylistDetailOut)
 async def get_playlist(
     playlist_id: int,
-    current_user: User | None = Depends(get_optional_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(
@@ -214,9 +250,9 @@ async def add_book_to_playlist(
     db.add(pb)
     try:
         await db.commit()
-    except Exception:
+    except IntegrityError:
         await db.rollback()
-        raise HTTPException(status_code=400, detail="Book already in playlist")
+        raise HTTPException(status_code=400, detail="Book already in playlist or book does not exist")
     return {"ok": True}
 
 

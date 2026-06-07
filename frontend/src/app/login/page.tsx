@@ -19,7 +19,7 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const data = await login(username, password);
-      setAuth(data.access_token, data.user);
+      setAuth(data.user);
       router.push("/");
     } catch (err: any) {
       setError(err?.response?.data?.detail || "Login failed");

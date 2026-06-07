@@ -1,19 +1,17 @@
 "use client";
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
 import type { User } from "@/lib/types";
-import { getMe } from "@/lib/api";
+import { getMe, logoutApi } from "@/lib/api";
 
 interface AuthContextType {
   user: User | null;
-  token: string | null;
-  setAuth: (token: string, user: User) => void;
+  setAuth: (user: User) => void;
   logout: () => void;
   loading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
-  token: null,
   setAuth: () => {},
   logout: () => {},
   loading: true,
@@ -21,39 +19,27 @@ const AuthContext = createContext<AuthContextType>({
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // On mount, check if a valid auth cookie exists by calling /me
   useEffect(() => {
-    const saved = localStorage.getItem("token");
-    if (saved) {
-      setToken(saved);
-      getMe()
-        .then(setUser)
-        .catch(() => {
-          localStorage.removeItem("token");
-          setToken(null);
-        })
-        .finally(() => setLoading(false));
-    } else {
-      setLoading(false);
-    }
+    getMe()
+      .then(setUser)
+      .catch(() => setUser(null))
+      .finally(() => setLoading(false));
   }, []);
 
-  const setAuth = useCallback((newToken: string, newUser: User) => {
-    localStorage.setItem("token", newToken);
-    setToken(newToken);
+  const setAuth = useCallback((newUser: User) => {
     setUser(newUser);
   }, []);
 
-  const logout = useCallback(() => {
-    localStorage.removeItem("token");
-    setToken(null);
+  const logout = useCallback(async () => {
+    try { await logoutApi(); } catch { /* ignore */ }
     setUser(null);
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, token, setAuth, logout, loading }}>
+    <AuthContext.Provider value={{ user, setAuth, logout, loading }}>
       {children}
     </AuthContext.Provider>
   );

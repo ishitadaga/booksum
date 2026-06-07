@@ -1,4 +1,5 @@
 """Hybrid search: SQLite first, Open Library fallback."""
+import asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_, func
 
@@ -46,10 +47,12 @@ async def search_books(
         db.add(book)
         new_books.append(book)
 
-        # Compute embedding on-the-fly if description exists
+        # Compute embedding on-the-fly if description exists (in thread to avoid blocking event loop)
         if ol.get("description") and len(ol["description"]) > 10:
             text = f"{ol['title']} by {ol['author']}. {ol['description']}"
-            embedding_service.add_embedding(ol["book_id"], text)
+            await asyncio.get_event_loop().run_in_executor(
+                None, embedding_service.add_embedding, ol["book_id"], text
+            )
 
     if new_books:
         await db.commit()

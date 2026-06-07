@@ -6,7 +6,7 @@ from backend.database import get_db
 from backend.models.user import User
 from backend.models.social import Follow
 from backend.models.playlist import Playlist
-from backend.schemas.user import UserOut
+from backend.schemas.user import UserPublicOut
 from backend.schemas.social import FollowOut, FeedItem
 from backend.schemas.playlist import PlaylistOut
 from backend.services.auth_service import get_current_user, get_optional_user
@@ -59,7 +59,7 @@ async def unfollow_user(
     return {"ok": True}
 
 
-@router.get("/followers", response_model=list[UserOut])
+@router.get("/followers", response_model=list[UserPublicOut])
 async def get_followers(
     user_id: int | None = Query(None),
     current_user: User | None = Depends(get_optional_user),
@@ -76,13 +76,13 @@ async def get_followers(
     )
     users = result.scalars().all()
     return [
-        UserOut(id=u.id, username=u.username, email=u.email,
-                display_name=u.display_name, created_at=u.created_at)
+        UserPublicOut(id=u.id, username=u.username,
+                      display_name=u.display_name, created_at=u.created_at)
         for u in users
     ]
 
 
-@router.get("/following", response_model=list[UserOut])
+@router.get("/following", response_model=list[UserPublicOut])
 async def get_following(
     user_id: int | None = Query(None),
     current_user: User | None = Depends(get_optional_user),
@@ -99,8 +99,8 @@ async def get_following(
     )
     users = result.scalars().all()
     return [
-        UserOut(id=u.id, username=u.username, email=u.email,
-                display_name=u.display_name, created_at=u.created_at)
+        UserPublicOut(id=u.id, username=u.username,
+                      display_name=u.display_name, created_at=u.created_at)
         for u in users
     ]
 
@@ -137,16 +137,16 @@ async def get_feed(
                 is_public=playlist.is_public, created_at=playlist.created_at,
                 updated_at=playlist.updated_at, username=playlist_user.username,
             ),
-            user=UserOut(
+            user=UserPublicOut(
                 id=playlist_user.id, username=playlist_user.username,
-                email=playlist_user.email, display_name=playlist_user.display_name,
+                display_name=playlist_user.display_name,
                 created_at=playlist_user.created_at,
             ),
         ))
     return feed
 
 
-@router.get("/users/search", response_model=list[UserOut])
+@router.get("/users/search", response_model=list[UserPublicOut])
 async def search_users(
     q: str = Query(..., min_length=1),
     db: AsyncSession = Depends(get_db),
@@ -158,7 +158,7 @@ async def search_users(
     )
     users = result.scalars().all()
     return [
-        UserOut(id=u.id, username=u.username, email=u.email,
-                display_name=u.display_name, created_at=u.created_at)
+        UserPublicOut(id=u.id, username=u.username,
+                      display_name=u.display_name, created_at=u.created_at)
         for u in users
     ]

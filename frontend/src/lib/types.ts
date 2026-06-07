@@ -69,6 +69,7 @@ export interface Playlist {
   updated_at: string | null;
   username: string | null;
   book_count: number;
+  preview_covers: string[];
 }
 
 export interface PlaylistDetail extends Playlist {

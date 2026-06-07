@@ -10,8 +10,15 @@ import { GENRE_COLORS } from "@/lib/constants";
 export default function PlaylistDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { current, loading, fetchPlaylist, addBook, removeBook, remove } = usePlaylists();
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push("/login");
+    }
+  }, [authLoading, user, router]);
   const [showAddBook, setShowAddBook] = useState(false);
 
   const playlistId = Number(params.id);
@@ -52,6 +59,16 @@ export default function PlaylistDetailPage() {
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-8">
+      <Link
+        href="/playlists"
+        className="inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-300 transition mb-6"
+      >
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+        </svg>
+        Back to Playlists
+      </Link>
+
       <div className="mb-6">
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -109,13 +126,20 @@ export default function PlaylistDetailPage() {
             >
               <span className="text-gray-600 text-sm w-6 text-right flex-shrink-0">{i + 1}</span>
               {book.cover_img ? (
-                <img src={book.cover_img} alt="" className="w-12 h-16 object-cover rounded flex-shrink-0" />
+                <img src={book.cover_img} alt="" className="w-20 h-28 object-cover rounded flex-shrink-0" />
               ) : (
-                <div className="w-12 h-16 bg-gray-700 rounded flex-shrink-0" />
+                <div className="w-20 h-28 bg-gray-700 rounded flex-shrink-0" />
               )}
               <div className="flex-1 min-w-0">
                 <div className="text-white font-medium truncate">{book.title}</div>
-                <div className="text-gray-400 text-sm truncate">{book.author}</div>
+                <div className="text-gray-400 text-sm truncate">
+                  {book.author}{book.publication_year ? ` · ${book.publication_year}` : ""}
+                </div>
+                {book.rating != null && (
+                  <div className="text-yellow-400 text-sm mt-1">
+                    <span>★</span> <span className="text-gray-300">{book.rating.toFixed(1)}</span>
+                  </div>
+                )}
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
                 <Link
