@@ -17,35 +17,26 @@
 .mark {
   width: 46px;
   margin: 0 auto 18px;
-  color: #a5b4fc;
+  color: rgb(var(--accent));
 }
 
 .wordmark {
-  color: #f3f4f6;
+  color: rgb(var(--primary));
   font-size: clamp(56px, 7vw, 80px);
   font-weight: 650;
   letter-spacing: -0.065em;
   line-height: 1.12;
 }
 
-.wordmark span { color: #a5b4fc; }
+.wordmark span { color: rgb(var(--accent)); }
 
-.subtitle {
-  margin-top: 24px;
-  color: #d1d5db;
-  font-size: clamp(17px, 2vw, 20px);
-  line-height: 1.65;
-  letter-spacing: -0.02em;
-}
-
-.subtitle span { color: #9ca3af; }
-.search { margin-top: 34px; }
-.hint { margin: 22px 0 0; color: #9ca3af; font-size: 12px; }
+.search { margin-top: 18px; }
+.hint { margin: 22px 0 0; color: rgb(var(--muted)); font-size: 12px; }
 
 .footer {
   margin-top: auto;
   padding: 24px 0 28px;
-  color: #9ca3af;
+  color: rgb(var(--muted));
   font-size: 12px;
   text-align: center;
 }
@@ -54,14 +45,12 @@
   .page { padding: 0 20px; }
   .discovery { padding-top: 56px; padding-bottom: 48px; }
   .mark { width: 40px; margin-bottom: 16px; }
-  .subtitle { margin-top: 20px; }
-  .search { margin-top: 28px; }
+  .search { margin-top: 16px; }
 }
 
 @media (max-height: 600px) and (min-width: 641px) {
   .discovery { padding-top: 24px; padding-bottom: 24px; }
   .mark { display: none; }
   .wordmark { font-size: 56px; }
-  .subtitle { margin-top: 16px; }
-  .search { margin-top: 24px; }
+  .search { margin-top: 12px; }
 }

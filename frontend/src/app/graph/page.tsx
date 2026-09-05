@@ -49,7 +49,7 @@ function GraphPageInner() {
 
   const handleNodeDoubleClick = useCallback(
     (id: string) => {
-      router.push(`/graph?book_id=${id}`);
+      router.push(`/graph?book_id=${encodeURIComponent(id)}`);
     },
     [router]
   );
@@ -84,7 +84,7 @@ function GraphPageInner() {
   if (!bookId) {
     return (
       <div className="flex flex-col items-center justify-center h-[calc(100vh-3.5rem)] px-4">
-        <h2 className="text-2xl text-white font-bold mb-4">Search for a book to explore</h2>
+        <h2 className="text-2xl text-primary font-bold mb-4">Search for a book to explore</h2>
         <div className="w-full max-w-lg">
           <BookSearchBar size="lg" />
         </div>
@@ -95,12 +95,12 @@ function GraphPageInner() {
   return (
     <div className="flex h-[calc(100vh-3.5rem)]">
       {/* Main graph area */}
-      <div className="flex-1 relative">
+      <div className="flex-1 min-w-0 relative overflow-hidden">
         {loading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-gray-900/80 z-10">
+          <div className="absolute inset-0 flex items-center justify-center bg-canvas/80 z-10">
             <div className="text-center">
-              <div className="w-12 h-12 border-4 border-gray-600 border-t-blue-500 rounded-full animate-spin mx-auto mb-3" />
-              <p className="text-gray-400">Building similarity graph...</p>
+              <div className="w-12 h-12 border-4 border-strong border-t-blue-500 rounded-full animate-spin mx-auto mb-3" />
+              <p className="text-muted">Building similarity graph...</p>
             </div>
           </div>
         )}
@@ -108,7 +108,7 @@ function GraphPageInner() {
         {error && (
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="text-center">
-              <p className="text-red-400 mb-4">{error}</p>
+              <p className="text-danger mb-4">{error}</p>
               <div className="w-full max-w-md">
                 <BookSearchBar size="sm" />
               </div>
@@ -128,10 +128,10 @@ function GraphPageInner() {
 
         {/* Expanding overlay */}
         {expanding && (
-          <div className="absolute inset-0 flex items-center justify-center bg-gray-900/50 z-10 pointer-events-none">
+          <div className="absolute inset-0 flex items-center justify-center bg-canvas/50 z-10 pointer-events-none">
             <div className="text-center">
-              <div className="w-10 h-10 border-4 border-gray-600 border-t-green-500 rounded-full animate-spin mx-auto mb-2" />
-              <p className="text-gray-300 text-sm">Expanding graph...</p>
+              <div className="w-10 h-10 border-4 border-strong border-t-green-500 rounded-full animate-spin mx-auto mb-2" />
+              <p className="text-secondary text-sm">Expanding graph...</p>
             </div>
           </div>
         )}
@@ -155,13 +155,13 @@ function GraphPageInner() {
         </div>
 
         {/* Legend overlay - bottom right */}
-        <div className="absolute bottom-4 right-4 w-48 z-20">
+        <div className="absolute top-28 sm:top-auto sm:bottom-4 right-4 w-40 sm:w-48 z-20">
           <GenreLegend />
         </div>
 
         {/* Graph info */}
         {graph && !selectedNode && (
-          <div className="absolute top-4 right-4 z-20 bg-gray-800/80 backdrop-blur border border-gray-700 rounded-lg px-3 py-2 text-xs text-gray-400">
+          <div className="absolute top-20 lg:top-4 right-4 z-20 bg-surface/80 backdrop-blur border border-line rounded-lg px-3 py-2 text-xs text-muted">
             {graph.nodes.length} similar books &middot; {graph.edges.length} connections
           </div>
         )}
@@ -182,7 +182,7 @@ function GraphPageInner() {
 
 export default function GraphPage() {
   return (
-    <Suspense fallback={<div className="flex items-center justify-center h-[calc(100vh-3.5rem)]"><div className="w-12 h-12 border-4 border-gray-600 border-t-blue-500 rounded-full animate-spin" /></div>}>
+    <Suspense fallback={<div className="flex items-center justify-center h-[calc(100vh-3.5rem)]"><div className="w-12 h-12 border-4 border-strong border-t-blue-500 rounded-full animate-spin" /></div>}>
       <GraphPageInner />
     </Suspense>
   );

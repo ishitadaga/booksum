@@ -9,7 +9,7 @@ interface GenreSidebarProps {
 export default function GenreSidebar({ selected, onSelect }: GenreSidebarProps) {
   return (
     <div className="w-52 flex-shrink-0">
-      <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 px-3">
+      <h2 className="text-xs font-semibold text-muted uppercase tracking-wider mb-3 px-3">
         Genres
       </h2>
       <ul className="space-y-1">
@@ -18,8 +18,8 @@ export default function GenreSidebar({ selected, onSelect }: GenreSidebarProps) 
             onClick={() => onSelect(undefined)}
             className={`w-full text-left px-3 py-2 rounded-lg text-sm transition ${
               !selected
-                ? "bg-gray-700 text-white"
-                : "text-gray-400 hover:bg-gray-800 hover:text-gray-300"
+                ? "bg-raised text-primary"
+                : "text-muted hover:bg-surface hover:text-secondary"
             }`}
           >
             All
@@ -31,8 +31,8 @@ export default function GenreSidebar({ selected, onSelect }: GenreSidebarProps) 
               onClick={() => onSelect(genre)}
               className={`w-full text-left px-3 py-2 rounded-lg text-sm transition flex items-center gap-2 ${
                 selected === genre
-                  ? "bg-gray-700 text-white"
-                  : "text-gray-400 hover:bg-gray-800 hover:text-gray-300"
+                  ? "bg-raised text-primary"
+                  : "text-muted hover:bg-surface hover:text-secondary"
               }`}
             >
               <span

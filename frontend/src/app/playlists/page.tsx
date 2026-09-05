@@ -73,7 +73,7 @@ export default function PlaylistsPage() {
             {/* Search bar */}
             <div className="flex-1 relative">
               <svg
-                className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500"
+                className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -90,7 +90,7 @@ export default function PlaylistsPage() {
                 placeholder="Search playlists..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 text-sm"
+                className="w-full pl-10 pr-3 py-2 bg-surface border border-line rounded-lg text-primary placeholder-muted focus:outline-none focus:border-blue-500 text-sm"
               />
             </div>
 
@@ -98,7 +98,7 @@ export default function PlaylistsPage() {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as SortOption)}
-              className="px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-gray-300 text-sm focus:outline-none focus:border-blue-500"
+              className="px-3 py-2 bg-surface border border-line rounded-lg text-secondary text-sm focus:outline-none focus:border-blue-500"
             >
               <option value="newest">Newest</option>
               <option value="most_books">Most Books</option>
@@ -109,7 +109,7 @@ export default function PlaylistsPage() {
             {user && (
               <button
                 onClick={() => setShowCreate(true)}
-                className="text-sm bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg transition whitespace-nowrap"
+                className="text-sm bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition whitespace-nowrap"
               >
                 Create Playlist
               </button>
@@ -119,10 +119,10 @@ export default function PlaylistsPage() {
           {/* Playlist grid */}
           {loading ? (
             <div className="text-center py-12">
-              <div className="w-8 h-8 border-2 border-gray-600 border-t-blue-500 rounded-full animate-spin mx-auto" />
+              <div className="w-8 h-8 border-2 border-strong border-t-blue-500 rounded-full animate-spin mx-auto" />
             </div>
           ) : filteredAndSorted.length === 0 ? (
-            <p className="text-gray-500 text-center py-12">No playlists found</p>
+            <p className="text-muted text-center py-12">No playlists found</p>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {filteredAndSorted.map((p) => (

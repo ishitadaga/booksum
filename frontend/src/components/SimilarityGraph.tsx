@@ -10,6 +10,13 @@ import cytoscape, { Core } from "cytoscape";
 import coseBilkent from "cytoscape-cose-bilkent";
 import type { GraphResponse, GraphNode } from "@/lib/types";
 import { GENRE_COLORS } from "@/lib/constants";
+import { useTheme } from "@/context/ThemeContext";
+
+function graphPalette() {
+  const css = getComputedStyle(document.documentElement);
+  const color = (name: string) => `rgb(${css.getPropertyValue(name).trim().split(/\s+/).join(",")})`;
+  return { edge: color("--graph-edge"), border: color("--strong"), accent: color("--link"), success: color("--success") };
+}
 
 // Register layout extension once
 if (typeof window !== "undefined") {
@@ -34,6 +41,8 @@ const SimilarityGraph = forwardRef<SimilarityGraphHandle, Props>(
     const cyRef = useRef<Core | null>(null);
     const tooltipRef = useRef<HTMLDivElement | null>(null);
     const prevCenterRef = useRef<string | null>(null);
+    const { resolvedTheme } = useTheme();
+    const palette = useRef({ edge: "#60749f", border: "#8b96a9", accent: "#1d4ed8", success: "#15803d" });
 
     const runLayout = useCallback(() => {
       if (!cyRef.current) return;
@@ -41,7 +50,7 @@ const SimilarityGraph = forwardRef<SimilarityGraphHandle, Props>(
 
       cy.layout({
         name: "cose-bilkent",
-        animate: true,
+        animate: !window.matchMedia("(prefers-reduced-motion: reduce)").matches,
         animationDuration: 1000,
         nodeRepulsion: 8000,
         idealEdgeLength: 120,
@@ -71,6 +80,7 @@ const SimilarityGraph = forwardRef<SimilarityGraphHandle, Props>(
 
     useEffect(() => {
       if (!containerRef.current) return;
+      palette.current = graphPalette();
 
       const currentCenter = graph.center_book.id;
       const isExpansion = prevCenterRef.current === currentCenter && cyRef.current !== null;
@@ -163,8 +173,7 @@ const SimilarityGraph = forwardRef<SimilarityGraphHandle, Props>(
       // Create tooltip element
       if (!tooltipRef.current) {
         const tip = document.createElement("div");
-        tip.style.cssText =
-          "position:absolute;pointer-events:none;z-index:100;background:#1f2937;border:1px solid #374151;border-radius:8px;padding:8px 12px;color:#f9fafb;font-size:12px;max-width:220px;box-shadow:0 4px 12px rgba(0,0,0,0.4);opacity:0;transition:opacity 0.15s;line-height:1.4;";
+        tip.className = "graph-tooltip";
         containerRef.current.parentElement!.appendChild(tip);
         tooltipRef.current = tip;
       }
@@ -234,7 +243,7 @@ const SimilarityGraph = forwardRef<SimilarityGraphHandle, Props>(
               },
               "border-width": (ele: any) => (ele.data("isCenter") ? 1.5 : 0.5),
               "border-color": (ele: any) =>
-                ele.data("isCenter") ? "#93c5fd" : "#4b5563",
+                ele.data("isCenter") ? palette.current.accent : palette.current.border,
               "background-opacity": (ele: any) =>
                 ele.data("isCenter") ? 1 : 0.85,
               "transition-property":
@@ -249,16 +258,10 @@ const SimilarityGraph = forwardRef<SimilarityGraphHandle, Props>(
                 const w = ele.data("weight") || 0.3;
                 return 0.8 + w * 3.2;
               },
-              "line-color": (ele: any) => {
-                const w = Math.min(Math.max(ele.data("weight") || 0.3, 0), 1);
-                const r = Math.round(55 + (96 - 55) * w);
-                const g = Math.round(65 + (165 - 65) * w);
-                const b = Math.round(81 + (250 - 81) * w);
-                return `rgb(${r},${g},${b})`;
-              },
+              "line-color": () => palette.current.edge,
               opacity: (ele: any) => {
                 const w = ele.data("weight") || 0.3;
-                return 0.15 + w * 0.55;
+                return 0.3 + w * 0.55;
               },
               "curve-style": "bezier",
               "transition-property": "opacity",
@@ -281,7 +284,7 @@ const SimilarityGraph = forwardRef<SimilarityGraphHandle, Props>(
             selector: ".highlighted",
             style: {
               opacity: 1,
-              "border-color": "#60a5fa",
+              "border-color": () => palette.current.accent,
               "border-width": 1.5,
             } as any,
           },
@@ -289,7 +292,7 @@ const SimilarityGraph = forwardRef<SimilarityGraphHandle, Props>(
           {
             selector: "node.selected",
             style: {
-              "border-color": "#3b82f6",
+              "border-color": () => palette.current.accent,
               "border-width": 2,
               opacity: 1,
             } as any,
@@ -298,7 +301,7 @@ const SimilarityGraph = forwardRef<SimilarityGraphHandle, Props>(
           {
             selector: "node.newly-added",
             style: {
-              "border-color": "#22c55e",
+              "border-color": () => palette.current.success,
               "border-width": 2,
             } as any,
           },
@@ -357,26 +360,25 @@ const SimilarityGraph = forwardRef<SimilarityGraphHandle, Props>(
         tip.appendChild(titleEl);
         if (author) {
           const authorEl = document.createElement("div");
-          authorEl.style.color = "#9ca3af";
+          authorEl.style.color = "rgb(var(--muted))";
           authorEl.textContent = author;
           tip.appendChild(authorEl);
         }
         if (!isCenter && sim) {
           const simEl = document.createElement("div");
-          simEl.style.cssText = "color:#60a5fa;margin-top:3px";
+          simEl.style.cssText = "color:rgb(var(--link));margin-top:3px";
           simEl.textContent = `${(sim * 100).toFixed(1)}% similar`;
           tip.appendChild(simEl);
         }
         tip.style.opacity = "1";
 
         const pos = node.renderedPosition();
-        const container = containerRef.current!.getBoundingClientRect();
-        tip.style.left = `${pos.x + container.left + 20}px`;
-        tip.style.top = `${pos.y + container.top - 10}px`;
+        tip.style.left = `${Math.max(8, Math.min(pos.x + 20, cy.width() - tip.offsetWidth - 8))}px`;
+        tip.style.top = `${Math.max(8, pos.y - 10)}px`;
 
         // Only apply hover border if not in highlighted/selected state
         if (!node.hasClass("highlighted") && !node.hasClass("selected")) {
-          node.style({ "border-color": "#60a5fa", "border-width": 1.5 });
+          node.style({ "border-color": palette.current.accent, "border-width": 1.5 });
         }
         containerRef.current!.style.cursor = "grab";
       });
@@ -390,11 +392,7 @@ const SimilarityGraph = forwardRef<SimilarityGraphHandle, Props>(
           !evt.target.hasClass("highlighted") &&
           !evt.target.hasClass("selected")
         ) {
-          const isCenter = evt.target.data("isCenter");
-          evt.target.style({
-            "border-color": isCenter ? "#93c5fd" : "#4b5563",
-            "border-width": isCenter ? 1.5 : 0.5,
-          });
+          evt.target.removeStyle("border-color border-width");
         }
         containerRef.current!.style.cursor = "default";
       });
@@ -421,6 +419,17 @@ const SimilarityGraph = forwardRef<SimilarityGraphHandle, Props>(
         cyRef.current = null;
       };
     }, [graph, onNodeClick, onNodeDoubleClick, onDeselect, runLayout]);
+
+    // Repaint the existing canvas without losing positions, zoom, or selection.
+    useEffect(() => {
+      palette.current = graphPalette();
+      cyRef.current?.style().update();
+    }, [resolvedTheme, graph]);
+
+    useEffect(() => () => {
+      tooltipRef.current?.remove();
+      tooltipRef.current = null;
+    }, []);
 
     return <div ref={containerRef} className="w-full h-full relative" />;
   }

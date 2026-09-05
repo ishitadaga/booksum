@@ -24,8 +24,8 @@ export default function ProfilePage() {
   if (!user) {
     return (
       <div className="flex flex-col items-center justify-center h-[calc(100vh-3.5rem)]">
-        <p className="text-gray-400 mb-4">Login to view your profile</p>
-        <Link href="/login" className="text-blue-400 hover:text-blue-300">Login</Link>
+        <p className="text-muted mb-4">Login to view your profile</p>
+        <Link href="/login" className="text-link hover:text-link">Login</Link>
       </div>
     );
   }
@@ -33,9 +33,9 @@ export default function ProfilePage() {
   return (
     <div className="max-w-3xl mx-auto px-4 py-8">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-white">{user.display_name || user.username}</h1>
-        <p className="text-gray-500 text-sm">@{user.username}</p>
-        <div className="flex gap-4 mt-3 text-sm text-gray-400">
+        <h1 className="text-2xl font-bold text-primary">{user.display_name || user.username}</h1>
+        <p className="text-muted text-sm">@{user.username}</p>
+        <div className="flex gap-4 mt-3 text-sm text-muted">
           <span>{playlists.length} playlists</span>
           <span>{followers.length} followers</span>
           <span>{following.length} following</span>
@@ -48,7 +48,7 @@ export default function ProfilePage() {
             key={t}
             onClick={() => setTab(t)}
             className={`text-sm font-medium pb-1 capitalize transition ${
-              tab === t ? "text-white border-b-2 border-blue-500" : "text-gray-500 hover:text-gray-300"
+              tab === t ? "text-primary border-b-2 border-blue-500" : "text-muted hover:text-secondary"
             }`}
           >
             {t}
@@ -59,10 +59,10 @@ export default function ProfilePage() {
       {tab === "playlists" && (
         loading ? (
           <div className="text-center py-12">
-            <div className="w-8 h-8 border-2 border-gray-600 border-t-blue-500 rounded-full animate-spin mx-auto" />
+            <div className="w-8 h-8 border-2 border-strong border-t-blue-500 rounded-full animate-spin mx-auto" />
           </div>
         ) : playlists.length === 0 ? (
-          <p className="text-gray-500 text-center py-12">No playlists yet</p>
+          <p className="text-muted text-center py-12">No playlists yet</p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {playlists.map((p) => (
@@ -74,14 +74,14 @@ export default function ProfilePage() {
 
       {tab === "followers" && (
         followers.length === 0 ? (
-          <p className="text-gray-500 text-center py-12">No followers yet</p>
+          <p className="text-muted text-center py-12">No followers yet</p>
         ) : (
           <div className="space-y-2">
             {followers.map((u) => (
-              <div key={u.id} className="flex items-center gap-3 bg-gray-800 border border-gray-700 rounded-xl p-4">
+              <div key={u.id} className="flex items-center gap-3 bg-surface border border-line rounded-xl p-4">
                 <div>
-                  <div className="text-white font-medium">{u.display_name || u.username}</div>
-                  <div className="text-gray-500 text-sm">@{u.username}</div>
+                  <div className="text-primary font-medium">{u.display_name || u.username}</div>
+                  <div className="text-muted text-sm">@{u.username}</div>
                 </div>
               </div>
             ))}
@@ -91,14 +91,14 @@ export default function ProfilePage() {
 
       {tab === "following" && (
         following.length === 0 ? (
-          <p className="text-gray-500 text-center py-12">Not following anyone</p>
+          <p className="text-muted text-center py-12">Not following anyone</p>
         ) : (
           <div className="space-y-2">
             {following.map((u) => (
-              <div key={u.id} className="flex items-center gap-3 bg-gray-800 border border-gray-700 rounded-xl p-4">
+              <div key={u.id} className="flex items-center gap-3 bg-surface border border-line rounded-xl p-4">
                 <div>
-                  <div className="text-white font-medium">{u.display_name || u.username}</div>
-                  <div className="text-gray-500 text-sm">@{u.username}</div>
+                  <div className="text-primary font-medium">{u.display_name || u.username}</div>
+                  <div className="text-muted text-sm">@{u.username}</div>
                 </div>
               </div>
             ))}

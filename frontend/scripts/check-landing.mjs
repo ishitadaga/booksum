@@ -35,21 +35,22 @@ await context.route('**/api/**', async route => {
 });
 
 try {
+  const guestResponse = page.waitForResponse(response => response.url().includes('/api/auth/me'));
   await page.goto(baseURL);
-  await page.waitForResponse(response => response.url().includes('/api/auth/me'));
+  await guestResponse;
   assert.equal(new URL(page.url()).pathname, '/', 'Guest session check must not redirect home to login');
   const input = page.getByRole('combobox', {name:'Search a book or author'});
   assert.equal(await input.count(), 1);
   assert.equal(await page.getByRole('heading',{level:1}).textContent(), 'BookSum');
-  assert.ok(await page.getByText('Start with a book you love.').isVisible());
+  assert.ok(await page.getByText('Start with a story you love.').isVisible());
   assert.equal(await page.getByText('Similarity Graph', {exact:true}).count(), 0);
   await page.screenshot({path:join(artifacts,'desktop.png'),fullPage:true});
   await page.getByRole('button',{name:'Dune',exact:true}).click();
   assert.equal(await input.inputValue(),'Dune');
   await page.getByText('Searching the library…').waitFor();
-  await page.getByRole('option').waitFor();
+  await page.getByRole('listbox').getByRole('option').waitFor();
   await input.press('ArrowDown');
-  assert.equal(await page.getByRole('option').getAttribute('aria-selected'),'true');
+  assert.equal(await page.getByRole('listbox').getByRole('option').getAttribute('aria-selected'),'true');
   await input.press('Escape');
   assert.equal(await page.getByRole('listbox').count(),0);
   assert.equal(await input.inputValue(),'Dune');
@@ -61,9 +62,9 @@ try {
   await input.fill('Dune');
   await page.waitForRequest(request => request.url().includes('/api/books/search') && new URL(request.url()).searchParams.get('q') === 'Dune');
   await input.fill('The Hobbit');
-  await page.getByRole('option').filter({hasText:'The Hobbit'}).waitFor();
+  await page.getByRole('listbox').getByRole('option').filter({hasText:'The Hobbit'}).waitFor();
   await pause(800);
-  assert.equal(await page.getByRole('option').filter({hasText:'Dune'}).count(),0,'A stale search response must not replace current results');
+  assert.equal(await page.getByRole('listbox').getByRole('option').filter({hasText:'Dune'}).count(),0,'A stale search response must not replace current results');
   await page.screenshot({path:join(artifacts,'results.png'),fullPage:true});
   await input.press('ArrowDown');
   await input.press('Enter');
@@ -76,7 +77,7 @@ try {
   await input.fill('retry');
   await page.getByRole('button',{name:'Try again',exact:true}).waitFor();
   await page.getByRole('button',{name:'Try again',exact:true}).click();
-  await page.getByRole('option').waitFor();
+  await page.getByRole('listbox').getByRole('option').waitFor();
   assert.equal(retryCalls,2);
   await input.press('Tab');
   await input.press('Tab');
@@ -91,9 +92,9 @@ try {
     if (width === 375) {
       await page.screenshot({path:join(artifacts,'mobile.png'),fullPage:true});
       await page.getByRole('button',{name:'The Hobbit',exact:true}).click();
-      await page.getByRole('option').waitFor();
+      await page.getByRole('listbox').getByRole('option').waitFor();
       await page.screenshot({path:join(artifacts,'mobile-results.png'),fullPage:true});
-      await page.getByRole('option').click();
+      await page.getByRole('listbox').getByRole('option').click();
       await page.waitForURL('**/graph?book_id=*');
       await page.goto(baseURL);
     }
@@ -103,8 +104,8 @@ try {
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),'No overflow with larger text');
   await page.evaluate(() => {document.documentElement.style.fontSize='';});
   await page.goto(baseURL + '/graph');
-  await page.getByRole('combobox').fill('The Hobbit');
-  await page.getByRole('option').waitFor();
+  await page.getByRole('combobox', {name:'Search for a book...'}).fill('The Hobbit');
+  await page.getByRole('listbox').getByRole('option').waitFor();
   assert.deepEqual(pageErrors, []);
   console.log('PASS: landing layout, examples, guest access, keyboard/touch selection, graph route, stale-response protection, empty/error/retry states, small screens, landscape, reduced motion, enlarged text, and shared graph search.');
   console.log('Screenshots:',artifacts);

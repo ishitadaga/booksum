@@ -33,9 +33,9 @@ export default function RegisterPage() {
   return (
     <div className="flex items-center justify-center min-h-[calc(100vh-3.5rem)] px-4">
       <form onSubmit={handleSubmit} className="w-full max-w-sm space-y-4">
-        <h1 className="text-2xl font-bold text-white text-center">Create Account</h1>
+        <h1 className="text-2xl font-bold text-primary text-center">Create Account</h1>
 
-        {error && <p className="text-red-400 text-sm text-center">{error}</p>}
+        {error && <p className="text-danger text-sm text-center">{error}</p>}
 
         <input
           type="text"
@@ -43,7 +43,7 @@ export default function RegisterPage() {
           value={username}
           onChange={(e) => setUsername(e.target.value)}
           required
-          className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
+          className="w-full px-4 py-3 bg-surface border border-line rounded-lg text-primary placeholder-muted focus:outline-none focus:border-blue-500"
         />
         <input
           type="email"
@@ -51,14 +51,14 @@ export default function RegisterPage() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
-          className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
+          className="w-full px-4 py-3 bg-surface border border-line rounded-lg text-primary placeholder-muted focus:outline-none focus:border-blue-500"
         />
         <input
           type="text"
           placeholder="Display Name (optional)"
           value={displayName}
           onChange={(e) => setDisplayName(e.target.value)}
-          className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
+          className="w-full px-4 py-3 bg-surface border border-line rounded-lg text-primary placeholder-muted focus:outline-none focus:border-blue-500"
         />
         <input
           type="password"
@@ -67,18 +67,18 @@ export default function RegisterPage() {
           onChange={(e) => setPassword(e.target.value)}
           required
           minLength={8}
-          className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
+          className="w-full px-4 py-3 bg-surface border border-line rounded-lg text-primary placeholder-muted focus:outline-none focus:border-blue-500"
         />
         <button
           type="submit"
           disabled={loading}
-          className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-medium transition disabled:opacity-50"
+          className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition disabled:opacity-50"
         >
           {loading ? "Creating account..." : "Sign Up"}
         </button>
-        <p className="text-gray-500 text-sm text-center">
+        <p className="text-muted text-sm text-center">
           Already have an account?{" "}
-          <Link href="/login" className="text-blue-400 hover:text-blue-300">
+          <Link href="/login" className="text-link hover:text-link">
             Login
           </Link>
         </p>

@@ -49,7 +49,7 @@ export default function PlaylistDetailPage() {
   if (loading || !current) {
     return (
       <div className="flex items-center justify-center h-[calc(100vh-3.5rem)]">
-        <div className="w-8 h-8 border-2 border-gray-600 border-t-blue-500 rounded-full animate-spin" />
+        <div className="w-8 h-8 border-2 border-strong border-t-blue-500 rounded-full animate-spin" />
       </div>
     );
   }
@@ -61,7 +61,7 @@ export default function PlaylistDetailPage() {
     <div className="max-w-3xl mx-auto px-4 py-8">
       <Link
         href="/playlists"
-        className="inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-300 transition mb-6"
+        className="inline-flex items-center gap-1.5 text-sm text-muted hover:text-secondary transition mb-6"
       >
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -72,14 +72,14 @@ export default function PlaylistDetailPage() {
       <div className="mb-6">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-white">{current.name}</h1>
-            <p className="text-gray-400 text-sm mt-1">by {current.username}</p>
+            <h1 className="text-2xl font-bold text-primary">{current.name}</h1>
+            <p className="text-muted text-sm mt-1">by {current.username}</p>
           </div>
           <div className="flex items-center gap-2">
             {current.genre && (
               <span
                 className="text-xs px-2 py-1 rounded-full"
-                style={{ backgroundColor: genreColor + "22", color: genreColor }}
+                style={{ backgroundColor: genreColor + "22", color: "rgb(var(--primary))" }}
               >
                 {current.genre}
               </span>
@@ -87,7 +87,7 @@ export default function PlaylistDetailPage() {
             {isOwner && (
               <button
                 onClick={handleDelete}
-                className="text-xs text-red-400 hover:text-red-300 transition"
+                className="text-xs text-danger hover:text-danger transition"
               >
                 Delete
               </button>
@@ -95,7 +95,7 @@ export default function PlaylistDetailPage() {
           </div>
         </div>
         {current.description && (
-          <p className="text-gray-500 text-sm mt-2">{current.description}</p>
+          <p className="text-muted text-sm mt-2">{current.description}</p>
         )}
       </div>
 
@@ -103,7 +103,7 @@ export default function PlaylistDetailPage() {
         <div className="mb-6">
           <button
             onClick={() => setShowAddBook(!showAddBook)}
-            className="text-sm bg-gray-800 border border-gray-700 hover:border-gray-600 text-white px-4 py-2 rounded-lg transition"
+            className="text-sm bg-surface border border-line hover:border-strong text-primary px-4 py-2 rounded-lg transition"
           >
             {showAddBook ? "Cancel" : "+ Add Book"}
           </button>
@@ -116,42 +116,42 @@ export default function PlaylistDetailPage() {
       )}
 
       {current.books.length === 0 ? (
-        <p className="text-gray-500 text-center py-12">No books in this playlist yet</p>
+        <p className="text-muted text-center py-12">No books in this playlist yet</p>
       ) : (
         <div className="space-y-3">
           {current.books.map((book, i) => (
             <div
               key={book.book_id}
-              className="flex items-center gap-4 bg-gray-800 border border-gray-700 rounded-xl p-4"
+              className="flex items-center gap-4 bg-surface border border-line rounded-xl p-4"
             >
-              <span className="text-gray-600 text-sm w-6 text-right flex-shrink-0">{i + 1}</span>
+              <span className="text-muted text-sm w-6 text-right flex-shrink-0">{i + 1}</span>
               {book.cover_img ? (
                 <img src={book.cover_img} alt="" className="w-20 h-28 object-cover rounded flex-shrink-0" />
               ) : (
-                <div className="w-20 h-28 bg-gray-700 rounded flex-shrink-0" />
+                <div className="w-20 h-28 bg-raised rounded flex-shrink-0" />
               )}
               <div className="flex-1 min-w-0">
-                <div className="text-white font-medium truncate">{book.title}</div>
-                <div className="text-gray-400 text-sm truncate">
+                <div className="text-primary font-medium truncate">{book.title}</div>
+                <div className="text-muted text-sm truncate">
                   {book.author}{book.publication_year ? ` · ${book.publication_year}` : ""}
                 </div>
                 {book.rating != null && (
-                  <div className="text-yellow-400 text-sm mt-1">
-                    <span>★</span> <span className="text-gray-300">{book.rating.toFixed(1)}</span>
+                  <div className="text-warning text-sm mt-1">
+                    <span>★</span> <span className="text-secondary">{book.rating.toFixed(1)}</span>
                   </div>
                 )}
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
                 <Link
                   href={`/graph?book_id=${book.book_id}`}
-                  className="text-xs text-blue-400 hover:text-blue-300 transition"
+                  className="text-xs text-link hover:text-link transition"
                 >
                   Similar
                 </Link>
                 {isOwner && (
                   <button
                     onClick={() => handleRemoveBook(book.book_id)}
-                    className="text-xs text-red-400 hover:text-red-300 transition"
+                    className="text-xs text-danger hover:text-danger transition"
                   >
                     Remove
                   </button>

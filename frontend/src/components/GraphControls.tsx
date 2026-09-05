@@ -20,12 +20,13 @@ export default function GraphControls({
   onZoomOut,
 }: Props) {
   return (
-    <div className="bg-gray-800/80 backdrop-blur border border-gray-700 rounded-lg p-3 space-y-3">
+    <div className="bg-surface/80 backdrop-blur border border-line rounded-lg p-3 space-y-3">
       <div>
-        <label className="text-xs text-gray-400 block mb-1">
+        <label className="text-xs text-muted block mb-1">
           Similar books: {topN}
         </label>
         <input
+          aria-label="Similar books"
           type="range"
           min={5}
           max={40}
@@ -35,10 +36,11 @@ export default function GraphControls({
         />
       </div>
       <div>
-        <label className="text-xs text-gray-400 block mb-1">
+        <label className="text-xs text-muted block mb-1">
           Min similarity: {minSimilarity.toFixed(2)}
         </label>
         <input
+          aria-label="Minimum similarity"
           type="range"
           min={0}
           max={80}
@@ -50,20 +52,20 @@ export default function GraphControls({
       <div className="flex gap-2">
         <button
           onClick={onZoomIn}
-          className="flex-1 text-xs bg-gray-700 hover:bg-gray-600 text-white py-1.5 rounded transition"
+          className="flex-1 text-xs bg-raised hover:bg-hover text-primary min-h-11 py-1.5 rounded transition"
         >
           Zoom +
         </button>
         <button
           onClick={onZoomOut}
-          className="flex-1 text-xs bg-gray-700 hover:bg-gray-600 text-white py-1.5 rounded transition"
+          className="flex-1 text-xs bg-raised hover:bg-hover text-primary min-h-11 py-1.5 rounded transition"
         >
           Zoom -
         </button>
       </div>
       <button
         onClick={onResetLayout}
-        className="w-full text-xs bg-gray-700 hover:bg-gray-600 text-white py-1.5 rounded transition"
+        className="w-full text-xs bg-raised hover:bg-hover text-primary min-h-11 py-1.5 rounded transition"
       >
         Reset Layout
       </button>
