@@ -8,16 +8,16 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "BookSum",
-  description: "Social media platform for book readers",
+  description: "Start with a book you love. Discover what to read next through the connections between books.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className={inter.className}>
+      <body className={`${inter.className} flex min-h-svh flex-col`}>
         <AuthProvider>
           <Navbar />
-          <main className="min-h-[calc(100vh-3.5rem)]">{children}</main>
+          <main className="flex-1">{children}</main>
         </AuthProvider>
       </body>
     </html>

@@ -1,0 +1,48 @@
+.root { position: relative; width: 100%; text-align: left; }
+.field { display: flex; align-items: center; position: relative; border: 1px solid #4b5563; background: #1f2937; border-radius: 12px; color: #d1d5db; transition: border-color 160ms, box-shadow 160ms; }
+.field:hover { border-color: #6b7280; }
+.field:focus-within { border-color: #a5b4fc; box-shadow: 0 0 0 3px #a5b4fc20; }
+.field input { width: 100%; min-width: 0; padding: 17px 16px 17px 0; background: transparent; border: 0; outline: none; color: #f9fafb; font-size: 16px; line-height: 26px; }
+.field input::placeholder { color: #9ca3af; }
+.searchIcon { margin: 0 16px 0 20px; color: #9ca3af; flex-shrink: 0; }
+.clear { display: grid; place-items: center; width: 44px; height: 44px; flex-shrink: 0; margin-right: 8px; border-radius: 50%; }
+.clear:hover { background: #374151; color: #fff; }
+.clear:focus-visible,.retry:focus-visible,.examples button:focus-visible { outline: 2px solid #a5b4fc; outline-offset: 3px; }
+.landing .field { border-radius: 32px; background: #1c2535; border-color: #4b5563; box-shadow: 0 4px 24px #00000012; }
+.landing .field:focus-within { border-color: #a5b4fc; box-shadow: 0 0 0 3px #a5b4fc20; }
+.landing .field input { padding-top: 19px; padding-bottom: 19px; }
+.landing .searchIcon { margin-left: 24px; }
+.small .field { border-radius: 8px; }
+.small .field input { padding-top: 9px; padding-bottom: 9px; font-size: 16px; }
+.small .searchIcon { margin-left: 12px; margin-right: 10px; width: 18px; }
+.popup { position: absolute; top: 100%; left: 0; right: 0; margin-top: 8px; border: 1px solid #4b5563; border-radius: 16px; background: #1f2937; box-shadow: 0 20px 50px #00000045; overflow: hidden; z-index: 40; }
+.landing .popup { top: 65px; }
+.resultsHint { margin: 0; padding: 14px 20px 10px; color: #9ca3af; font-size: 12px; }
+.results { max-height: min(360px, 48svh); overflow-y: auto; overscroll-behavior: contain; list-style: none; margin: 0; padding: 0 0 6px; }
+.result { display: flex; align-items: center; gap: 14px; padding: 12px 20px; cursor: pointer; border-top: 1px solid #37415170; }
+.result:hover,.result[aria-selected="true"] { background: #303b52; }
+.cover,.coverPlaceholder { width: 36px; height: 50px; object-fit: cover; border-radius: 3px; flex-shrink: 0; }
+.coverPlaceholder { display: grid; place-items: center; background: #374151; color: #c7d2fe; }
+.resultCopy { min-width: 0; flex: 1; }
+.title { display: block; color: #f9fafb; font-size: 14px; line-height: 1.45; overflow-wrap: anywhere; }
+.secondary { display: block; color: #b0b8c5; font-size: 12px; line-height: 1.55; margin-top: 3px; }
+.genre { display: block; color: #c7d2fe; font-size: 11px; margin-top: 4px; }
+.resultArrow { color: #a5b4fc; }
+.message { display: flex; gap: 12px; align-items: center; min-height: 82px; padding: 20px; color: #d1d5db; font-size: 14px; overflow-wrap: anywhere; }
+.retry { min-height: 44px; margin-top: 10px; padding: 8px 14px; border: 1px solid #6b7280; border-radius: 8px; color: #e0e7ff; }
+.retry:hover { background: #374151; }
+.spinner { width: 18px; height: 18px; flex-shrink: 0; border: 2px solid #4b5563; border-top-color: #a5b4fc; border-radius: 50%; animation: spin 800ms linear infinite; }
+.examples { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 2px 14px; margin-top: 20px; font-size: 12px; }
+.examples>span { color: #9ca3af; margin-right: 2px; }
+.examples button { min-height: 44px; color: #c7d2fe; border-radius: 4px; padding: 6px 2px; text-underline-offset: 5px; }
+.examples button:hover { color: #e0e7ff; text-decoration: underline; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media(max-width:640px) {
+  .landing .field input { padding-top: 15px; padding-bottom: 15px; }
+  .landing .searchIcon { margin-left: 18px; margin-right: 12px; }
+  .landing .popup { top: 57px; }
+  .examples { gap: 0 14px; margin-top: 16px; }
+  .examples>span { flex-basis: 100%; text-align: center; margin-bottom: 2px; }
+  .result { padding: 12px 14px; }
+}
+@media(prefers-reduced-motion:reduce) { .field { transition: none; } .spinner { animation: none; } }

@@ -19,6 +19,7 @@ api.interceptors.response.use(
   (error) => {
     if (
       error.response?.status === 401 &&
+      error.config?.url !== "/api/auth/me" &&
       typeof window !== "undefined" &&
       !window.location.pathname.startsWith("/login") &&
       !window.location.pathname.startsWith("/register")
@@ -30,8 +31,8 @@ api.interceptors.response.use(
 );
 
 // Books
-export async function searchBooks(q: string, limit = 20): Promise<BookSearchResult> {
-  const { data } = await api.get("/api/books/search", { params: { q, limit } });
+export async function searchBooks(q: string, limit = 20, signal?: AbortSignal): Promise<BookSearchResult> {
+  const { data } = await api.get("/api/books/search", { params: { q, limit }, signal, timeout: 30000 });
   return data;
 }
 
