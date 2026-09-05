@@ -45,12 +45,14 @@ async def search_books(query: str, limit: int = 10) -> list[dict]:
         work_key = doc.get("key", "")
         description = await _fetch_description(work_key) if work_key else ""
 
+        raw_subjects = doc.get("subject", [])
         books.append({
             "book_id": make_ol_book_id(title, author),
             "title": title,
             "author": author,
             "description": description,
-            "genres": _map_subjects(doc.get("subject", [])),
+            "genres": _map_subjects(raw_subjects),
+            "subjects": ", ".join(raw_subjects[:20]),
             "publication_year": doc.get("first_publish_year"),
             "isbn": isbns[0] if isbns else "",
             "cover_img": cover_img,

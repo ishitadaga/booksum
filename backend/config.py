@@ -10,7 +10,8 @@ DATABASE_URL = os.environ.get("DATABASE_URL", f"sqlite+aiosqlite:///{DATA_DIR / 
 # Embeddings
 EMBEDDINGS_PATH = DATA_DIR / "embeddings.npy"
 BOOK_IDS_PATH = DATA_DIR / "book_ids.npy"
-MODEL_NAME = "all-MiniLM-L6-v2"
+MODEL_NAME = "BAAI/bge-small-en-v1.5"
+EMBEDDING_DIM = 384
 
 # JWT
 JWT_SECRET = os.environ.get("JWT_SECRET", "booksum-dev-secret-change-in-production")

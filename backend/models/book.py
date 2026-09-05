@@ -17,4 +17,5 @@ class Book(Base):
     num_ratings = Column(Integer)
     source = Column(String)
     open_library_key = Column(String)
+    subjects = Column(Text)  # comma-separated Open Library subjects
     has_embedding = Column(Boolean, default=False)

@@ -49,7 +49,12 @@ async def search_books(
 
         # Compute embedding on-the-fly if description exists (in thread to avoid blocking event loop)
         if ol.get("description") and len(ol["description"]) > 10:
-            text = f"{ol['title']} by {ol['author']}. {ol['description']}"
+            parts = [ol["description"]]
+            if ol.get("subjects"):
+                parts.append(f"Subjects: {ol['subjects']}")
+            parts.append(f"Genre: {ol.get('genres', '')}")
+            parts.append(f"{ol['title']} by {ol['author']}")
+            text = " | ".join(parts)
             await asyncio.get_event_loop().run_in_executor(
                 None, embedding_service.add_embedding, ol["book_id"], text
             )

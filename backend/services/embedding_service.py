@@ -1,9 +1,9 @@
-"""Load and compute embeddings with all-MiniLM-L6-v2.
+"""Load and compute embeddings with BAAI/bge-small-en-v1.5.
 Manages in-memory float32 matrix, periodic flush to disk as float16.
 """
 import numpy as np
 from sentence_transformers import SentenceTransformer
-from backend.config import EMBEDDINGS_PATH, BOOK_IDS_PATH, MODEL_NAME
+from backend.config import EMBEDDINGS_PATH, BOOK_IDS_PATH, MODEL_NAME, EMBEDDING_DIM
 
 # Module-level state (loaded once at startup)
 model: SentenceTransformer | None = None
@@ -14,11 +14,10 @@ _new_count = 0  # track unsaved additions
 
 
 def load():
-    """Load model and pre-computed embeddings. Called once at startup."""
-    global model, embeddings, book_ids, id_to_index
-
-    print("Loading sentence-transformer model...")
-    model = SentenceTransformer(MODEL_NAME)
+    """Load pre-computed embeddings at startup. The sentence-transformer model
+    is loaded lazily on first encode — only the Open Library fallback (embedding
+    a brand-new book) needs it, so we don't pay its RAM/startup cost otherwise."""
+    global embeddings, book_ids, id_to_index
 
     if EMBEDDINGS_PATH.exists() and BOOK_IDS_PATH.exists():
         print("Loading pre-computed embeddings...")
@@ -29,7 +28,7 @@ def load():
         print(f"Loaded {len(book_ids)} embeddings, shape={embeddings.shape}")
     else:
         print("No pre-computed embeddings found. Starting with empty matrix.")
-        embeddings = np.empty((0, 384), dtype=np.float32)
+        embeddings = np.empty((0, EMBEDDING_DIM), dtype=np.float32)
         book_ids = np.array([], dtype=str)
         id_to_index = {}
 
@@ -42,9 +41,18 @@ def get_embedding(book_id: str) -> np.ndarray | None:
     return None
 
 
+def get_model() -> SentenceTransformer:
+    """Load the sentence-transformer model on first use (lazy)."""
+    global model
+    if model is None:
+        print("Loading sentence-transformer model (first embed)...")
+        model = SentenceTransformer(MODEL_NAME)
+    return model
+
+
 def encode_text(text: str) -> np.ndarray:
     """Encode a single text and L2-normalize."""
-    vec = model.encode(text, normalize_embeddings=True)
+    vec = get_model().encode(text, normalize_embeddings=True)
     return vec.astype(np.float32)
 
 

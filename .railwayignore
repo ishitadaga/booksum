@@ -1,0 +1,18 @@
+# Railway uses THIS file instead of .gitignore when uploading the build context.
+# That matters here: backend/data/{booksum.db,embeddings.npy,book_ids.npy} are
+# gitignored but MUST be uploaded for the image build — so they are NOT listed
+# below. We only exclude the heavy things the backend image doesn't need.
+backend_env/
+venv/
+frontend/
+book_visuals/
+notebooks/
+.git/
+**/__pycache__/
+*.pyc
+*.epub
+backend/data/unified_books.csv
+backend/data/*.db-wal
+backend/data/*.db-shm
+out/
+.env

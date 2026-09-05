@@ -34,6 +34,16 @@ npx next dev --port 3001
 2. `compute_embeddings.py` → embeddings.npy (49.2MB, 64,092 books) + book_ids.npy
 3. `seed_db.py` → booksum.db (110.5MB)
 
+## Architecture
+- **Style**: Stateless REST API with JWT-based token authentication
+- **Auth flow**: User logs in → server returns a signed JWT containing `user_id` + expiry → frontend stores token and sends `Authorization: Bearer <jwt>` on every request → server verifies signature, extracts user ID, no server-side session storage needed
+- **JWT config**: HS256 algorithm, 7-day expiry, secret in `backend/config.py`
+- **Password storage**: bcrypt hashes via passlib (never plain text)
+- **Auth dependencies**: `get_current_user` (401 if not logged in) and `get_optional_user` (returns None for anonymous) used as FastAPI `Depends()` on route handlers
+- **Monolithic backend**: auth, books, playlists, similarity, Open Library fallback all in one FastAPI process
+- **Decoupled frontend/backend**: Next.js and FastAPI are separate processes communicating over REST, deployable independently
+- **Book ratings**: Only from Goodreads (Best Books Ever dataset); Open Library fallback books have `rating: None`
+
 ## Important Notes
 - CORS is configured for ports 3000 and 3001 (in `backend/config.py`)
 - bcrypt must be pinned to 4.0.1 (passlib compat issue with newer versions)

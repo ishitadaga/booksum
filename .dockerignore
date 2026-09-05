@@ -1,0 +1,16 @@
+# Keep the build context small. backend/data/{embeddings.npy,book_ids.npy,
+# booksum.db} ARE needed and are not excluded here.
+backend_env/
+venv/
+frontend/
+book_visuals/
+notebooks/
+.git/
+**/__pycache__/
+*.pyc
+*.epub
+backend/data/unified_books.csv
+backend/data/*.db-wal
+backend/data/*.db-shm
+out/
+.env
