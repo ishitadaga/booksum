@@ -1,0 +1,20 @@
+import assert from 'node:assert/strict';
+import {networkLinks, edgeKey} from '../src/lib/network.ts';
+const nodes=Array.from({length:21},(_,i)=>({id:String(i)}));
+const edges=nodes.flatMap((a,i)=>nodes.slice(i+1).map((b,j)=>({source:a.id,target:b.id,weight:1-(i+j)/100})));
+const graph={center_book:nodes[0],nodes:nodes.slice(1),edges};
+const snapshot=JSON.stringify(graph), sparse=networkLinks(graph);
+assert.equal(edges.length,210);
+assert.ok(sparse.length<=27 && sparse.length>=20);
+assert.equal(new Set(sparse.map(edgeKey)).size,sparse.length);
+assert.equal(networkLinks(graph,true).length,210);
+const reached=new Set(['0']);
+for(let i=0;i<nodes.length;i++) for(const edge of sparse) if(reached.has(edge.source)||reached.has(edge.target)){reached.add(edge.source);reached.add(edge.target);}
+assert.equal(reached.size,21,'Sparse links preserve reachability');
+assert.ok(sparse.every(edge=>edges.includes(edge)),'Weights and original edges preserved');
+assert.equal(JSON.stringify(graph),snapshot,'Input not mutated');
+assert.deepEqual(networkLinks({...graph,edges:[...edges].reverse()}),sparse,'Deterministic across input order');
+const invalid={...graph,edges:[{source:'0',target:'1',weight:.2},{source:'1',target:'0',weight:.8},{source:'1',target:'1',weight:1},{source:'0',target:'missing',weight:.5},{source:'1',target:'2',weight:NaN},{source:'3',target:'4',weight:.7}]};
+assert.deepEqual(networkLinks(invalid).map(e=>e.weight),[.8,.7]);
+assert.equal(networkLinks({...graph,nodes:[],edges:[]}).length,0);
+console.log('PASS: sparse connectivity, weights, all links, deterministic ordering, deduplication, invalid edges, disconnected/empty graphs.');

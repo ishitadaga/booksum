@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import ThemeSelect from "./ThemeSelect";
@@ -7,18 +8,21 @@ import ThemeSelect from "./ThemeSelect";
 export default function Navbar() {
   const { user, logout } = useAuth();
   const isHome = usePathname() === "/";
+  const navRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const observer = new ResizeObserver(() => document.documentElement.style.setProperty("--nav-height", `${navRef.current?.offsetHeight || 80}px`));
+    if (navRef.current) observer.observe(navRef.current);
+    return () => observer.disconnect();
+  }, []);
 
   return (
-    <nav aria-label="Main navigation" className={`bg-canvas sticky top-0 z-50 ${isHome ? "" : "border-b border-line"}`}>
+    <nav ref={navRef} aria-label="Main navigation" className={`bg-canvas sticky top-0 z-50 ${isHome ? "" : "border-b border-line"}`}>
       <div className={`max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between flex-wrap gap-x-3 gap-y-1 ${isHome ? "min-h-20 py-3" : "min-h-14 py-1"}`}>
         <div className="flex items-center gap-6">
-          {!isHome && <Link href="/" className="text-xl font-bold text-primary tracking-tight">
+          <Link href="/" className="text-xl font-bold text-primary tracking-tight min-h-11 inline-flex items-center">
             BookSum
-          </Link>}
+          </Link>
           <div className={`${isHome ? "flex" : "hidden sm:flex"} items-center gap-4 text-sm`}>
-            <Link href="/graph" className="text-secondary hover:text-primary transition inline-flex items-center min-h-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-4 rounded-sm">
-              Explore
-            </Link>
             <Link href="/playlists" className="text-secondary hover:text-primary transition inline-flex items-center min-h-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-4 rounded-sm">
               Playlists
             </Link>

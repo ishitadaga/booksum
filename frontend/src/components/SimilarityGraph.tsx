@@ -1,438 +1,171 @@
 "use client";
-import {
-  useRef,
-  useEffect,
-  useCallback,
-  forwardRef,
-  useImperativeHandle,
-} from "react";
-import cytoscape, { Core } from "cytoscape";
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef } from "react";
+import cytoscape, { type Core, type ElementDefinition, type StylesheetJson } from "cytoscape";
 import coseBilkent from "cytoscape-cose-bilkent";
-import type { GraphResponse, GraphNode } from "@/lib/types";
-import { GENRE_COLORS } from "@/lib/constants";
 import { useTheme } from "@/context/ThemeContext";
+import { GENRE_COLORS } from "@/lib/constants";
+import { edgeKey } from "@/lib/network";
+import type { GraphResponse, GraphEdge } from "@/lib/types";
 
-function graphPalette() {
-  const css = getComputedStyle(document.documentElement);
-  const color = (name: string) => `rgb(${css.getPropertyValue(name).trim().split(/\s+/).join(",")})`;
-  return { edge: color("--graph-edge"), border: color("--strong"), accent: color("--link"), success: color("--success") };
-}
-
-// Register layout extension once
-if (typeof window !== "undefined") {
-  cytoscape.use(coseBilkent);
-}
+if (typeof window !== "undefined") cytoscape.use(coseBilkent);
 
 export interface SimilarityGraphHandle {
   cy: Core | null;
-  runLayout: () => void;
+  fit: () => void;
+  zoom: (factor: number) => void;
 }
-
 interface Props {
   graph: GraphResponse;
-  onNodeClick: (node: GraphNode) => void;
-  onNodeDoubleClick: (bookId: string) => void;
-  onDeselect?: () => void;
+  edges: GraphEdge[];
+  selectedId: string | null;
+  onSelect: (id: string | null) => void;
 }
 
-const SimilarityGraph = forwardRef<SimilarityGraphHandle, Props>(
-  function SimilarityGraph({ graph, onNodeClick, onNodeDoubleClick, onDeselect }, ref) {
-    const containerRef = useRef<HTMLDivElement>(null);
-    const cyRef = useRef<Core | null>(null);
-    const tooltipRef = useRef<HTMLDivElement | null>(null);
-    const prevCenterRef = useRef<string | null>(null);
-    const { resolvedTheme } = useTheme();
-    const palette = useRef({ edge: "#60749f", border: "#8b96a9", accent: "#1d4ed8", success: "#15803d" });
+function paint(): StylesheetJson {
+  const css = getComputedStyle(document.documentElement);
+  const color = (name: string) => `rgb(${css.getPropertyValue(name).trim().split(/\s+/).join(",")})`;
+  return [
+    { selector: "node", style: {
+      label: "data(shortLabel)", width: 16, height: 16,
+      "background-color": ele => GENRE_COLORS[ele.data("genre")] || "#7c879c",
+      "background-opacity": 1, "border-width": 2, "border-color": color("--canvas"),
+      color: color("--secondary"), "font-size": 11, "font-family": "Inter, sans-serif",
+      "text-wrap": "wrap", "text-max-width": "110px", "text-valign": "bottom", "text-margin-y": 9,
+      "text-outline-color": color("--canvas"), "text-outline-width": 3,
+      "overlay-opacity": 0, "transition-property": "opacity", "transition-duration": 160,
+    }},
+    { selector: "node.center", style: {
+      width: 28, height: 28, "border-width": 3, "border-color": color("--accent"),
+      "font-size": 13, "font-weight": 650, color: color("--primary"),
+      "underlay-color": color("--accent"), "underlay-opacity": .09, "underlay-padding": 8,
+    }},
+    { selector: "edge", style: {
+      width: 1, "line-color": color("--graph-edge"), opacity: .38,
+      "curve-style": "straight", "overlay-opacity": 0,
+    }},
+    { selector: ".muted", style: { opacity: .12 }},
+    { selector: "node.focused", style: { "border-color": color("--accent"), "border-width": 3, color: color("--primary"), "font-weight": 650 }},
+    { selector: "edge.focused", style: { opacity: .8, width: 1.5, "line-color": color("--accent") }},
+    { selector: "node:selected", style: { "border-color": color("--accent"), "border-width": 3 }},
+  ];
+}
 
-    const runLayout = useCallback(() => {
-      if (!cyRef.current) return;
-      const cy = cyRef.current;
+const SimilarityGraph = forwardRef<SimilarityGraphHandle, Props>(function SimilarityGraph({graph, edges, selectedId, onSelect}, ref) {
+  const element = useRef<HTMLDivElement>(null);
+  const cy = useRef<Core | null>(null);
+  const callback = useRef(onSelect);
+  callback.current = onSelect;
+  const selected = useRef(selectedId);
+  selected.current = selectedId;
+  const lastCenter = useRef<string | null>(null);
+  const lastNodes = useRef("");
+  const { resolvedTheme } = useTheme();
+  const fit = useCallback(() => {
+    if (!cy.current?.nodes().length) return;
+    cy.current.fit(undefined, 64);
+    // A fit-all on a phone makes every title illegible. Start close enough to
+    // read, centered on the starting book; the full map remains pannable.
+    if (cy.current.width() < 500 && cy.current.zoom() < 1) {
+      cy.current.zoom(1);
+      cy.current.center(cy.current.nodes(".center"));
+      return;
+    }
+    if (cy.current.zoom() > 1.35) cy.current.zoom(1.35);
+    cy.current.center();
+  }, []);
+  const focus = useCallback((id: string | null) => {
+    const instance = cy.current;
+    if (!instance) return;
+    instance.elements().removeClass("muted focused");
+    if (!id) return;
+    const node = instance.getElementById(id);
+    if (!node.length) return;
+    instance.elements().addClass("muted");
+    node.closedNeighborhood().removeClass("muted");
+    node.addClass("focused");
+    node.connectedEdges().addClass("focused");
+  }, []);
+  useImperativeHandle(ref, () => ({
+    get cy() { return cy.current; },
+    fit,
+    zoom(factor) {
+      const instance = cy.current;
+      if (instance) instance.zoom({level: Math.max(.25, Math.min(2.5, instance.zoom() * factor)), renderedPosition: {x:instance.width()/2,y:instance.height()/2}});
+    },
+  }), [fit]);
 
-      cy.layout({
-        name: "cose-bilkent",
-        animate: !window.matchMedia("(prefers-reduced-motion: reduce)").matches,
-        animationDuration: 1000,
-        nodeRepulsion: 8000,
-        idealEdgeLength: 120,
-        edgeElasticity: 0.15,
-        nestingFactor: 0.1,
-        gravity: 0.25,
-        gravityRange: 1.5,
-        numIter: 3000,
-        fit: true,
-        padding: 60,
-        randomize: true,
-        ungrabifyWhileSimulating: false,
-      } as any).run();
-    }, []);
+  useEffect(() => {
+    if (!element.current) return;
+    const instance = cytoscape({
+      container: element.current, elements: [], style: paint(), layout: {name:"preset"},
+      minZoom: .25, maxZoom: 2.5, wheelSensitivity: .18,
+      boxSelectionEnabled: false, autounselectify: true, touchTapThreshold: 10,
+    });
+    cy.current = instance;
+    instance.on("tap", "node", event => callback.current(event.target.id()));
+    instance.on("tap", event => { if (event.target === instance) callback.current(null); });
+    instance.on("mouseover", "node", event => { if (!selected.current) focus(event.target.id()); element.current!.style.cursor="grab"; });
+    instance.on("mouseout", "node", () => { focus(selected.current); element.current!.style.cursor="default"; });
+    instance.on("grab", "node", () => { element.current!.style.cursor="grabbing"; });
+    instance.on("free", "node", () => { element.current!.style.cursor="grab"; });
+    let previousWidth = element.current.clientWidth;
+    const observer = new ResizeObserver(() => {
+      instance.resize();
+      const width = element.current?.clientWidth || 0;
+      if ((width < 500) !== (previousWidth < 500)) fit();
+      previousWidth = width;
+    });
+    observer.observe(element.current);
+    return () => { observer.disconnect(); instance.destroy(); cy.current=null; lastCenter.current=null; lastNodes.current=""; };
+  }, [focus, fit]);
 
-    // Expose cy instance and runLayout to parent via ref
-    useImperativeHandle(
-      ref,
-      () => ({
-        get cy() {
-          return cyRef.current;
-        },
-        runLayout,
-      }),
-      [runLayout]
-    );
-
-    useEffect(() => {
-      if (!containerRef.current) return;
-      palette.current = graphPalette();
-
-      const currentCenter = graph.center_book.id;
-      const isExpansion = prevCenterRef.current === currentCenter && cyRef.current !== null;
-      prevCenterRef.current = currentCenter;
-
-      // --- Expansion path: add new nodes/edges to existing instance ---
-      if (isExpansion && cyRef.current) {
-        const cy = cyRef.current;
-        const existingIds = new Set(cy.nodes().map((n) => n.id()));
-
-        // Collect new elements
-        const newElements: cytoscape.ElementDefinition[] = [];
-        const expandedNode = cy.getElementById(graph.center_book.id);
-        const expandPos = expandedNode.length > 0
-          ? expandedNode.position()
-          : { x: cy.width() / 2, y: cy.height() / 2 };
-
-        // Add new nodes (not already in graph)
-        const newNodeIds: string[] = [];
-        for (const node of graph.nodes) {
-          if (!existingIds.has(node.id)) {
-            newNodeIds.push(node.id);
-            newElements.push({
-              data: {
-                id: node.id,
-                label: node.label,
-                author: node.author,
-                genre: node.genre,
-                similarity: node.similarity,
-                isCenter: false,
-                nodeData: node,
-              },
-            });
-          }
-        }
-
-        // Add new edges (check both directions)
-        const existingEdgeIds = new Set(cy.edges().map((e) => e.id()));
-        for (const edge of graph.edges) {
-          const edgeId = `${edge.source}-${edge.target}`;
-          const reverseId = `${edge.target}-${edge.source}`;
-          if (!existingEdgeIds.has(edgeId) && !existingEdgeIds.has(reverseId)) {
-            newElements.push({
-              data: {
-                id: edgeId,
-                source: edge.source,
-                target: edge.target,
-                weight: edge.weight,
-              },
-            });
-          }
-        }
-
-        if (newElements.length === 0) return;
-
-        // Position new nodes in a circle around the expanded node
-        const radius = 150;
-        const newNodes = newElements.filter((el) => !el.data.source);
-        newNodes.forEach((el, i) => {
-          const angle = (2 * Math.PI * i) / newNodes.length;
-          el.position = {
-            x: expandPos.x + radius * Math.cos(angle),
-            y: expandPos.y + radius * Math.sin(angle),
-          };
-        });
-
-        const added = cy.add(newElements);
-
-        // Highlight newly added nodes with green border
-        const addedNodes = added.filter("node");
-        addedNodes.addClass("newly-added");
-        setTimeout(() => {
-          addedNodes.removeClass("newly-added");
-        }, 1500);
-
-        // Re-run layout with positions preserved
-        runLayout();
-        return;
-        // No cleanup — we keep the same cy instance
-      }
-
-      // --- Full-reload path: destroy + recreate Cytoscape ---
-
-      // Clean up previous instance
-      if (cyRef.current) {
-        cyRef.current.destroy();
-        cyRef.current = null;
-      }
-
-      // Create tooltip element
-      if (!tooltipRef.current) {
-        const tip = document.createElement("div");
-        tip.className = "graph-tooltip";
-        containerRef.current.parentElement!.appendChild(tip);
-        tooltipRef.current = tip;
-      }
-
-      // Build elements
-      const elements: cytoscape.ElementDefinition[] = [];
-
-      const c = graph.center_book;
-      elements.push({
-        data: {
-          id: c.id,
-          label: c.label,
-          author: c.author,
-          genre: c.genre,
-          similarity: 1,
-          isCenter: true,
-          nodeData: c,
-        },
-      });
-
-      for (const node of graph.nodes) {
-        elements.push({
-          data: {
-            id: node.id,
-            label: node.label,
-            author: node.author,
-            genre: node.genre,
-            similarity: node.similarity,
-            isCenter: false,
-            nodeData: node,
-          },
-        });
-      }
-
-      for (const edge of graph.edges) {
-        elements.push({
-          data: {
-            id: `${edge.source}-${edge.target}`,
-            source: edge.source,
-            target: edge.target,
-            weight: edge.weight,
-          },
-        });
-      }
-
-      const cy = cytoscape({
-        container: containerRef.current,
-        elements,
-        style: [
-          {
-            selector: "node",
-            style: {
-              label: "",
-              "background-color": (ele: any) => {
-                const genre = ele.data("genre") || "Fiction";
-                return GENRE_COLORS[genre] || "#666";
-              },
-              width: (ele: any) => {
-                if (ele.data("isCenter")) return 40;
-                const sim = ele.data("similarity") || 0.3;
-                return 16 + sim * 16;
-              },
-              height: (ele: any) => {
-                if (ele.data("isCenter")) return 40;
-                const sim = ele.data("similarity") || 0.3;
-                return 16 + sim * 16;
-              },
-              "border-width": (ele: any) => (ele.data("isCenter") ? 1.5 : 0.5),
-              "border-color": (ele: any) =>
-                ele.data("isCenter") ? palette.current.accent : palette.current.border,
-              "background-opacity": (ele: any) =>
-                ele.data("isCenter") ? 1 : 0.85,
-              "transition-property":
-                "opacity, border-color, border-width",
-              "transition-duration": "0.2s",
-            } as any,
-          },
-          {
-            selector: "edge",
-            style: {
-              width: (ele: any) => {
-                const w = ele.data("weight") || 0.3;
-                return 0.8 + w * 3.2;
-              },
-              "line-color": () => palette.current.edge,
-              opacity: (ele: any) => {
-                const w = ele.data("weight") || 0.3;
-                return 0.3 + w * 0.55;
-              },
-              "curve-style": "bezier",
-              "transition-property": "opacity",
-              "transition-duration": "0.2s",
-            } as any,
-          },
-          {
-            selector: "node:active",
-            style: { "overlay-opacity": 0 },
-          },
-          // Dimmed class — used for neighbor highlighting
-          {
-            selector: ".dimmed",
-            style: {
-              opacity: 0.15,
-            },
-          },
-          // Highlighted class — neighbors of selected node
-          {
-            selector: ".highlighted",
-            style: {
-              opacity: 1,
-              "border-color": () => palette.current.accent,
-              "border-width": 1.5,
-            } as any,
-          },
-          // Selected node
-          {
-            selector: "node.selected",
-            style: {
-              "border-color": () => palette.current.accent,
-              "border-width": 2,
-              opacity: 1,
-            } as any,
-          },
-          // Newly added nodes — green border for expansion
-          {
-            selector: "node.newly-added",
-            style: {
-              "border-color": () => palette.current.success,
-              "border-width": 2,
-            } as any,
-          },
-        ],
-        layout: { name: "preset" },
-        minZoom: 0.2,
-        maxZoom: 3,
-      });
-
-      cyRef.current = cy;
-
-      // --- Node tap: highlight neighbors ---
-      cy.on("tap", "node", (evt) => {
-        const node = evt.target;
-        const nodeData = node.data("nodeData");
-        if (nodeData) onNodeClick(nodeData);
-
-        // Clear previous highlighting
-        cy.elements().removeClass("dimmed highlighted selected");
-
-        // Dim everything, then highlight neighborhood
-        cy.elements().addClass("dimmed");
-        const neighborhood = node.closedNeighborhood();
-        neighborhood.removeClass("dimmed").addClass("highlighted");
-        node.removeClass("highlighted").addClass("selected");
-      });
-
-      // --- Background tap: clear highlighting ---
-      cy.on("tap", (evt) => {
-        if (evt.target === cy) {
-          cy.elements().removeClass("dimmed highlighted selected");
-          if (onDeselect) onDeselect();
+  useEffect(() => {
+    const instance = cy.current;
+    if (!instance) return;
+    const nodes = [graph.center_book, ...graph.nodes.filter(n => n.id !== graph.center_book.id)];
+    const signature = nodes.map(n=>n.id).sort().join("\u0000");
+    const fresh = lastCenter.current !== graph.center_book.id;
+    const changed = lastNodes.current !== signature;
+    const wantedNodes = new Set(nodes.map(n=>n.id));
+    const wantedEdges = new Set(edges.map(edge => "edge:" + edgeKey(edge)));
+    instance.batch(() => {
+      if (fresh) instance.elements().remove();
+      instance.nodes().filter(n=>!wantedNodes.has(n.id())).remove();
+      instance.edges().filter(e=>!wantedEdges.has(e.id())).remove();
+      const additions: ElementDefinition[] = [];
+      nodes.forEach((node, index) => {
+        const data = {id:node.id, label:node.label, shortLabel:node.label.length > 48 ? node.label.slice(0,45)+"…" : node.label, genre:node.genre, nodeData:node};
+        const existing = instance.getElementById(node.id);
+        if (existing.length) existing.data(data);
+        else {
+          const angle = index * 2.399963;
+          const radius = 60 + 45 * Math.sqrt(index);
+          additions.push({data, classes:node.id===graph.center_book.id?"center":"",position:{x:Math.cos(angle)*radius,y:Math.sin(angle)*radius}});
         }
       });
-
-      cy.on("dbltap", "node", (evt) => {
-        onNodeDoubleClick(evt.target.id());
+      edges.forEach(edge => {
+        const id = "edge:" + edgeKey(edge);
+        if (!instance.getElementById(id).length) additions.push({data:{...edge,id}});
       });
+      instance.add(additions);
+    });
+    lastCenter.current = graph.center_book.id;
+    lastNodes.current = signature;
+    focus(selected.current);
+    if (fresh || changed) {
+      // Compute settled positions once; dragging never restarts or randomizes the map.
+      instance.layout({
+        name:"cose-bilkent", animate:false, randomize:false, fit:false,
+        nodeDimensionsIncludeLabels:true, nodeRepulsion:11000, idealEdgeLength:95,
+        edgeElasticity:.18, gravity:.18, numIter:1600, quality:"default",
+      } as cytoscape.LayoutOptions).run();
+      fit();
+    }
+  }, [graph, edges, fit, focus]);
 
-      // --- Hover tooltip ---
-      cy.on("mouseover", "node", (evt) => {
-        const node = evt.target;
-        const tip = tooltipRef.current;
-        if (!tip) return;
+  useEffect(() => { cy.current?.style(paint()); }, [resolvedTheme]);
+  useEffect(() => { focus(selectedId); }, [selectedId, focus]);
 
-        const title = node.data("label") || "";
-        const author = node.data("author") || "";
-        const sim = node.data("similarity");
-        const isCenter = node.data("isCenter");
-
-        // Build tooltip with safe textContent (no innerHTML/XSS)
-        tip.textContent = "";
-        const titleEl = document.createElement("div");
-        titleEl.style.cssText = "font-weight:600;margin-bottom:2px";
-        titleEl.textContent = title;
-        tip.appendChild(titleEl);
-        if (author) {
-          const authorEl = document.createElement("div");
-          authorEl.style.color = "rgb(var(--muted))";
-          authorEl.textContent = author;
-          tip.appendChild(authorEl);
-        }
-        if (!isCenter && sim) {
-          const simEl = document.createElement("div");
-          simEl.style.cssText = "color:rgb(var(--link));margin-top:3px";
-          simEl.textContent = `${(sim * 100).toFixed(1)}% similar`;
-          tip.appendChild(simEl);
-        }
-        tip.style.opacity = "1";
-
-        const pos = node.renderedPosition();
-        tip.style.left = `${Math.max(8, Math.min(pos.x + 20, cy.width() - tip.offsetWidth - 8))}px`;
-        tip.style.top = `${Math.max(8, pos.y - 10)}px`;
-
-        // Only apply hover border if not in highlighted/selected state
-        if (!node.hasClass("highlighted") && !node.hasClass("selected")) {
-          node.style({ "border-color": palette.current.accent, "border-width": 1.5 });
-        }
-        containerRef.current!.style.cursor = "grab";
-      });
-
-      cy.on("mouseout", "node", (evt) => {
-        const tip = tooltipRef.current;
-        if (tip) tip.style.opacity = "0";
-
-        // Only reset border if not in highlighted/selected state
-        if (
-          !evt.target.hasClass("highlighted") &&
-          !evt.target.hasClass("selected")
-        ) {
-          evt.target.removeStyle("border-color border-width");
-        }
-        containerRef.current!.style.cursor = "default";
-      });
-
-      // --- Drag cursors ---
-      cy.on("grab", "node", () => {
-        containerRef.current!.style.cursor = "grabbing";
-      });
-
-      cy.on("free", "node", () => {
-        containerRef.current!.style.cursor = "default";
-      });
-
-      // Hide tooltip on pan/zoom
-      cy.on("viewport", () => {
-        const tip = tooltipRef.current;
-        if (tip) tip.style.opacity = "0";
-      });
-
-      runLayout();
-
-      return () => {
-        cy.destroy();
-        cyRef.current = null;
-      };
-    }, [graph, onNodeClick, onNodeDoubleClick, onDeselect, runLayout]);
-
-    // Repaint the existing canvas without losing positions, zoom, or selection.
-    useEffect(() => {
-      palette.current = graphPalette();
-      cyRef.current?.style().update();
-    }, [resolvedTheme, graph]);
-
-    useEffect(() => () => {
-      tooltipRef.current?.remove();
-      tooltipRef.current = null;
-    }, []);
-
-    return <div ref={containerRef} className="w-full h-full relative" />;
-  }
-);
-
+  return <div ref={element} className="w-full h-full" role="img" aria-label={`Book connection map for ${graph.center_book.label}. ${graph.nodes.length} related books. Use the book list to select a book with the keyboard.`} />;
+});
 export default SimilarityGraph;

@@ -33,7 +33,7 @@ const resolved = expected => page.waitForFunction(value => document.documentElem
 const canvasState = () => page.evaluate(() => {
   const cy = [...document.querySelectorAll('div')].find(el=>el._cyreg?.cy)?._cyreg.cy;
   if (!cy) return null;
-  return {edge:cy.edges()[0].style('line-color'),zoom:cy.zoom(),pan:cy.pan(),positions:cy.nodes().map(n=>({id:n.id(),...n.position()})),selected:cy.nodes('.selected').map(n=>n.id())};
+  return {edge:cy.edges()[0].style('line-color'),zoom:cy.zoom(),pan:cy.pan(),positions:cy.nodes().map(n=>({id:n.id(),...n.position()})),selected:cy.nodes('.focused').map(n=>n.id())};
 });
 
 try {
@@ -84,17 +84,15 @@ try {
   await page.reload();
   await page.getByText('Start with a story you love.').waitFor();
   await page.clock.fastForward(8100);
-  await page.getByText('One good book', {exact:false}).waitFor();
-  await page.getByRole('button',{name:'Pause discovery messages'}).click();
-  await page.clock.fastForward(16000);
-  assert.ok(await page.getByText('One good book', {exact:false}).isVisible());
-  await page.getByRole('button',{name:'Next discovery message'}).click();
-  assert.ok(await page.getByText('Start with a book you love.').isVisible());
+  await page.waitForFunction(()=>[...document.querySelectorAll('p')].some(p=>p.className.includes('_active')&&p.textContent.includes('One good book')));
+  assert.equal(await page.getByRole('button',{name:/Pause discovery|Next discovery/}).count(),0);
+  await page.clock.fastForward(8100);
+  await page.waitForFunction(()=>[...document.querySelectorAll('p')].some(p=>p.className.includes('_active')&&p.textContent.includes('Start with a book you love.')));
   await page.emulateMedia({reducedMotion:'reduce'});
   await page.reload();
   await page.getByText('Start with a story you love.').waitFor();
   await page.clock.fastForward(24000);
-  assert.ok(await page.getByText('Start with a story you love.').isVisible());
+  assert.ok(await page.getByText('Start with a story you love.').evaluate(p=>p.className.includes('_active')));
   assert.equal(await page.getByRole('button',{name:'Pause discovery messages'}).count(),0);
 
   await page.goto(baseURL+'/graph?book_id=dune');
@@ -103,7 +101,7 @@ try {
     const cy=[...document.querySelectorAll('div')].find(el=>el._cyreg?.cy)._cyreg.cy;
     cy.getElementById('dune').emit('tap');cy.zoom(1.2);cy.pan({x:120,y:130});
   });
-  await page.getByRole('heading',{name:'Dune',exact:true}).waitFor();
+  await page.getByRole('heading',{name:'Dune',exact:true,level:2}).waitFor();
   await theme().selectOption('light');
   const before = await canvasState();
   await page.screenshot({path:join(artifacts,'graph-light.png'),fullPage:true});
@@ -136,7 +134,7 @@ try {
     }
   }
   assert.deepEqual(errors,[]);
-  console.log('PASS: light/dark/system, persistence, system changes, cross-tab sync, contrast, responsive layouts, rotation/pause/reduced motion, graph repaint/state preservation, themed routes and modal.');
+  console.log('PASS: light/dark/system, persistence, system changes, cross-tab sync, contrast, responsive layouts, natural rotation/reduced motion, graph repaint/state preservation, themed routes and modal.');
   console.log('Screenshots:',artifacts);
   console.log('All API responses are isolated fixtures; no backend data was written.');
 } finally {await browser.close();}

@@ -20,6 +20,7 @@ export interface BookSearchResult {
 }
 
 export interface GraphNode {
+  similarity_source?: string;
   id: string;
   label: string;
   author: string | null;

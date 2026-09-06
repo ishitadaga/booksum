@@ -45,10 +45,12 @@ export async function getBook(bookId: string): Promise<Book> {
 export async function getSimilarityGraph(
   bookId: string,
   topN = 20,
-  minSimilarity = 0.3
+  minSimilarity = 0.3,
+  signal?: AbortSignal
 ): Promise<GraphResponse> {
   const { data } = await api.get("/api/graph/similarity", {
     params: { book_id: bookId, top_n: topN, min_similarity: minSimilarity },
+    signal, timeout: 45000,
   });
   return data;
 }
@@ -57,9 +59,11 @@ export async function expandGraphNode(
   bookId: string,
   existingIds: string[],
   topN = 10,
-  minSimilarity = 0.2
+  minSimilarity = 0.2,
+  signal?: AbortSignal
 ): Promise<GraphResponse> {
   const { data } = await api.get("/api/graph/similarity/expand", {
+    signal, timeout: 45000,
     params: {
       book_id: bookId,
       existing_ids: existingIds.join(","),

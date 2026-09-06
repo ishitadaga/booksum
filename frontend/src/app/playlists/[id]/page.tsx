@@ -143,7 +143,7 @@ export default function PlaylistDetailPage() {
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
                 <Link
-                  href={`/graph?book_id=${book.book_id}`}
+                  href={`/?book_id=${book.book_id}`}
                   className="text-xs text-link hover:text-link transition"
                 >
                   Similar

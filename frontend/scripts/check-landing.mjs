@@ -68,7 +68,7 @@ try {
   await page.screenshot({path:join(artifacts,'results.png'),fullPage:true});
   await input.press('ArrowDown');
   await input.press('Enter');
-  await page.waitForURL('**/graph?book_id=*');
+  await page.waitForURL('**/?book_id=*');
   assert.equal(new URL(page.url()).searchParams.get('book_id'),hobbit.book_id);
 
   await page.goto(baseURL);
@@ -95,7 +95,7 @@ try {
       await page.getByRole('listbox').getByRole('option').waitFor();
       await page.screenshot({path:join(artifacts,'mobile-results.png'),fullPage:true});
       await page.getByRole('listbox').getByRole('option').click();
-      await page.waitForURL('**/graph?book_id=*');
+      await page.waitForURL('**/?book_id=*');
       await page.goto(baseURL);
     }
   }
@@ -104,7 +104,7 @@ try {
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),'No overflow with larger text');
   await page.evaluate(() => {document.documentElement.style.fontSize='';});
   await page.goto(baseURL + '/graph');
-  await page.getByRole('combobox', {name:'Search for a book...'}).fill('The Hobbit');
+  await page.getByRole('combobox', {name:'Search a book or author'}).fill('The Hobbit');
   await page.getByRole('listbox').getByRole('option').waitFor();
   assert.deepEqual(pageErrors, []);
   console.log('PASS: landing layout, examples, guest access, keyboard/touch selection, graph route, stale-response protection, empty/error/retry states, small screens, landscape, reduced motion, enlarged text, and shared graph search.');

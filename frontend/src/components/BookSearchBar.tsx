@@ -57,7 +57,7 @@ export default function BookSearchBar({
     setQuery("");
     setActiveIndex(-1);
     if (onSelect) onSelect(bookId);
-    else router.push(`/graph?book_id=${encodeURIComponent(bookId)}`);
+    else router.push(`/?book_id=${encodeURIComponent(bookId)}`);
   }
 
   return (

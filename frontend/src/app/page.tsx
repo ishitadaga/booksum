@@ -2,8 +2,15 @@
 import BookSearchBar from "@/components/BookSearchBar";
 import RotatingSubtitle from "@/components/RotatingSubtitle";
 import styles from "./page.module.css";
+import { Suspense } from "react";
+import { useSearchParams } from "next/navigation";
+import dynamic from "next/dynamic";
 
-export default function Home() {
+const DiscoveryWorkspace = dynamic(() => import("@/components/DiscoveryWorkspace"), { ssr: false, loading: () => <p className="p-8 text-muted" role="status">Opening your book map…</p> });
+
+function Discovery() {
+  const bookId = useSearchParams().get("book_id");
+  if (bookId) return <DiscoveryWorkspace key={bookId} bookId={bookId} />;
   return (
     <div className={styles.page}>
       <section className={styles.discovery} aria-labelledby="discovery-title">
@@ -29,4 +36,8 @@ export default function Home() {
       <footer className={styles.footer}>A world of books, connected by you.</footer>
     </div>
   );
+}
+
+export default function Home() {
+  return <Suspense fallback={<p className="p-8 text-muted">Opening discovery…</p>}><Discovery /></Suspense>;
 }
