@@ -26,8 +26,11 @@ export default function PlaylistsPage() {
   const [sortBy, setSortBy] = useState<SortOption>("newest");
 
   useEffect(() => {
-    fetchPlaylists(selectedGenre ? { genre: selectedGenre } : undefined);
-  }, [selectedGenre, fetchPlaylists]);
+    if (!user) return;
+    const params: { user_id?: number; genre?: string } = { user_id: user.id };
+    if (selectedGenre) params.genre = selectedGenre;
+    fetchPlaylists(params);
+  }, [selectedGenre, user, fetchPlaylists]);
 
   const handleCreate = async (data: { name: string; genre?: string; description?: string }) => {
     await create(data);
