@@ -162,3 +162,15 @@ async def search_users(
                       display_name=u.display_name, created_at=u.created_at)
         for u in users
     ]
+
+
+@router.get("/users/{user_id}", response_model=UserPublicOut)
+async def get_user(user_id: int, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return UserPublicOut(
+        id=user.id, username=user.username,
+        display_name=user.display_name, created_at=user.created_at,
+    )

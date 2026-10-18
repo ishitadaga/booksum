@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { login } from "@/lib/api";
+import PasswordInput from "@/components/PasswordInput";
 
 export default function LoginPage() {
   const [username, setUsername] = useState("");
@@ -43,9 +44,7 @@ export default function LoginPage() {
           required
           className="w-full px-4 py-3 bg-surface border border-line rounded-lg text-primary placeholder-muted focus:outline-none focus:border-blue-500"
         />
-        <input
-          type="password"
-          placeholder="Password"
+        <PasswordInput
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required

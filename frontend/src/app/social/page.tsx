@@ -103,7 +103,9 @@ export default function SocialPage() {
             {feed.map((item) => (
               <div key={item.playlist.id}>
                 <p className="text-muted text-xs mb-2">
-                  {item.user.display_name || item.user.username} shared a playlist
+                  <Link href={`/profile/${item.user.id}`} className="hover:text-secondary transition">
+                    {item.user.display_name || item.user.username}
+                  </Link>{" "}shared a playlist
                 </p>
                 <PlaylistCard playlist={item.playlist} />
               </div>
@@ -126,10 +128,10 @@ export default function SocialPage() {
                   key={u.id}
                   className="flex items-center justify-between bg-surface border border-line rounded-xl p-4"
                 >
-                  <div>
+                  <Link href={`/profile/${u.id}`} className="hover:opacity-80 transition">
                     <div className="text-primary font-medium">{u.display_name || u.username}</div>
                     <div className="text-muted text-sm">@{u.username}</div>
-                  </div>
+                  </Link>
                   {followingIds.has(u.id) ? (
                     <button
                       onClick={() => handleUnfollow(u.id)}

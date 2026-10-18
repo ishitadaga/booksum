@@ -5,6 +5,8 @@ from sqlalchemy import select
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
+import os
+
 from backend.database import get_db
 from backend.config import JWT_EXPIRE_MINUTES
 from backend.models.user import User
@@ -17,13 +19,16 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 limiter = Limiter(key_func=get_remote_address)
 
 
+_is_prod = os.environ.get("ENV") == "production"
+
+
 def _set_auth_cookie(response: JSONResponse, token: str) -> None:
     response.set_cookie(
         key=COOKIE_NAME,
         value=token,
         httponly=True,
-        samesite="lax",
-        secure=False,  # Set True in production behind HTTPS
+        samesite="none" if _is_prod else "lax",
+        secure=_is_prod,
         max_age=JWT_EXPIRE_MINUTES * 60,
         path="/",
     )

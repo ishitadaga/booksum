@@ -1,16 +1,34 @@
 """Hybrid search: SQLite first, Open Library fallback."""
 import asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, or_, func
+from sqlalchemy import select, or_, func, text
 
 from backend.models.book import Book
 from backend.services import openlibrary_client, embedding_service
 from backend.schemas.book import BookOut, BookSearchResult
 
 
+async def ensure_search_indexes(db: AsyncSession):
+    await db.execute(text(
+        "CREATE INDEX IF NOT EXISTS idx_books_title ON books(title COLLATE NOCASE)"
+    ))
+    await db.execute(text(
+        "CREATE INDEX IF NOT EXISTS idx_books_author ON books(author COLLATE NOCASE)"
+    ))
+    await db.commit()
+
+
+_indexes_created = False
+
+
 async def search_books(
     query: str, db: AsyncSession, limit: int = 20
 ) -> BookSearchResult:
+    global _indexes_created
+    if not _indexes_created:
+        await ensure_search_indexes(db)
+        _indexes_created = True
+
     q = f"%{query}%"
     result = await db.execute(
         select(Book)
@@ -23,18 +41,16 @@ async def search_books(
     )
     local_books = result.scalars().all()
 
-    if len(local_books) >= limit:
+    if local_books:
         return BookSearchResult(
             books=[_to_book_out(b) for b in local_books],
             total=len(local_books),
             source="local",
         )
 
-    # Fallback to Open Library for remaining
-    remaining = limit - len(local_books)
-    ol_books = await openlibrary_client.search_books(query, limit=remaining)
+    # Only fall back to Open Library when we have zero local results
+    ol_books = await openlibrary_client.search_books(query, limit=limit)
 
-    # Insert OL books into database and compute embeddings
     new_books = []
     for ol in ol_books:
         existing = await db.execute(
@@ -47,30 +63,25 @@ async def search_books(
         db.add(book)
         new_books.append(book)
 
-        # Compute embedding on-the-fly if description exists (in thread to avoid blocking event loop)
         if ol.get("description") and len(ol["description"]) > 10:
             parts = [ol["description"]]
             if ol.get("subjects"):
                 parts.append(f"Subjects: {ol['subjects']}")
             parts.append(f"Genre: {ol.get('genres', '')}")
             parts.append(f"{ol['title']} by {ol['author']}")
-            text = " | ".join(parts)
+            text_input = " | ".join(parts)
             await asyncio.get_event_loop().run_in_executor(
-                None, embedding_service.add_embedding, ol["book_id"], text
+                None, embedding_service.add_embedding, ol["book_id"], text_input
             )
 
     if new_books:
         await db.commit()
 
-    all_books = [_to_book_out(b) for b in local_books] + [
-        BookOut(**ol) for ol in ol_books
-    ]
-    source = "local" if not ol_books else ("mixed" if local_books else "openlibrary")
-
+    all_books = [BookOut(**ol) for ol in ol_books]
     return BookSearchResult(
         books=all_books[:limit],
         total=len(all_books),
-        source=source,
+        source="openlibrary",
     )
 
 

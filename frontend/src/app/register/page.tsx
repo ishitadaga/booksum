@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { register } from "@/lib/api";
+import PasswordInput from "@/components/PasswordInput";
 
 export default function RegisterPage() {
   const [username, setUsername] = useState("");
@@ -60,9 +61,7 @@ export default function RegisterPage() {
           onChange={(e) => setDisplayName(e.target.value)}
           className="w-full px-4 py-3 bg-surface border border-line rounded-lg text-primary placeholder-muted focus:outline-none focus:border-blue-500"
         />
-        <input
-          type="password"
-          placeholder="Password"
+        <PasswordInput
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required

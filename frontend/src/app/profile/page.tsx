@@ -78,12 +78,12 @@ export default function ProfilePage() {
         ) : (
           <div className="space-y-2">
             {followers.map((u) => (
-              <div key={u.id} className="flex items-center gap-3 bg-surface border border-line rounded-xl p-4">
+              <Link key={u.id} href={`/profile/${u.id}`} className="flex items-center gap-3 bg-surface border border-line rounded-xl p-4 hover:border-strong transition">
                 <div>
                   <div className="text-primary font-medium">{u.display_name || u.username}</div>
                   <div className="text-muted text-sm">@{u.username}</div>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         )
@@ -95,12 +95,12 @@ export default function ProfilePage() {
         ) : (
           <div className="space-y-2">
             {following.map((u) => (
-              <div key={u.id} className="flex items-center gap-3 bg-surface border border-line rounded-xl p-4">
+              <Link key={u.id} href={`/profile/${u.id}`} className="flex items-center gap-3 bg-surface border border-line rounded-xl p-4 hover:border-strong transition">
                 <div>
                   <div className="text-primary font-medium">{u.display_name || u.username}</div>
                   <div className="text-muted text-sm">@{u.username}</div>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         )
