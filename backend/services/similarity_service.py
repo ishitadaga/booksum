@@ -1,5 +1,6 @@
 """Core similarity engine: hybrid scoring (cosine + genre + author + era + popularity) → graph response."""
 import math
+import re
 import numpy as np
 from collections import defaultdict
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -44,6 +45,19 @@ _RELATED_PAIRS = [
 for a, b in _RELATED_PAIRS:
     GENRE_ADJACENCY[(a, b)] = 0.5
     GENRE_ADJACENCY[(b, a)] = 0.5
+
+
+def _normalize_title(title: str) -> str:
+    t = title.lower().strip()
+    t = re.sub(r"\(.*?\)", "", t)
+    t = re.sub(r"[^a-z0-9\s]", "", t)
+    return re.sub(r"\s+", " ", t).strip()
+
+
+def _dedup_key(author: str | None, title: str) -> str:
+    a = (author or "unknown").strip().lower()
+    a = re.sub(r"\s+", " ", a)
+    return f"{a}||{_normalize_title(title)}"
 
 
 def _genre_adjacency_score(genre_a: str | None, genre_b: str | None) -> float:
@@ -110,9 +124,12 @@ async def get_similarity_graph(
     result = await db.execute(select(Book).where(Book.book_id.in_(candidate_ids)))
     books_map = {b.book_id: b for b in result.scalars().all()}
 
-    # Hybrid scoring with author diversity cap
+    # Hybrid scoring with author diversity cap and dedup
     scored_nodes = []
     author_counts: dict[str, int] = defaultdict(int)
+    seen_titles: set[str] = set()
+    center_key = _dedup_key(center_book.author, center_book.title)
+    seen_titles.add(center_key)
 
     for idx in top_indices:
         bid = str(all_ids[idx])
@@ -120,6 +137,11 @@ async def get_similarity_graph(
             continue
         book = books_map.get(bid)
         if not book:
+            continue
+
+        # Deduplicate: skip books with same normalized (author, title)
+        dk = _dedup_key(book.author, book.title)
+        if dk in seen_titles:
             continue
 
         # Author diversity cap
@@ -144,6 +166,7 @@ async def get_similarity_graph(
         if final_sim >= min_similarity:
             scored_nodes.append((book, final_sim))
             author_counts[book_author] += 1
+            seen_titles.add(dk)
 
         if len(scored_nodes) >= top_n:
             break
@@ -239,9 +262,16 @@ async def expand_node_graph(
     result = await db.execute(select(Book).where(Book.book_id.in_(candidate_ids)))
     books_map = {b.book_id: b for b in result.scalars().all()}
 
-    # Hybrid scoring with author diversity cap
+    # Hybrid scoring with author diversity cap and dedup
     scored_nodes = []
     author_counts: dict[str, int] = defaultdict(int)
+    seen_titles: set[str] = set()
+    seen_titles.add(_dedup_key(expand_book.author, expand_book.title))
+
+    # Also mark existing graph books as seen to avoid adding duplicates of them
+    existing_books_result = await db.execute(select(Book).where(Book.book_id.in_(list(existing_set))))
+    for eb in existing_books_result.scalars().all():
+        seen_titles.add(_dedup_key(eb.author, eb.title))
 
     for idx in top_indices:
         bid = str(all_ids[idx])
@@ -249,6 +279,11 @@ async def expand_node_graph(
             continue
         book = books_map.get(bid)
         if not book:
+            continue
+
+        # Deduplicate: skip books with same normalized (author, title)
+        dk = _dedup_key(book.author, book.title)
+        if dk in seen_titles:
             continue
 
         book_author = (book.author or "").strip().lower()
@@ -272,6 +307,7 @@ async def expand_node_graph(
         if final_sim >= min_similarity:
             scored_nodes.append((book, final_sim))
             author_counts[book_author] += 1
+            seen_titles.add(dk)
 
         if len(scored_nodes) >= top_n:
             break
