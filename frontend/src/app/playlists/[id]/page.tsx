@@ -4,6 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { usePlaylists } from "@/hooks/usePlaylists";
+import { updatePlaylist } from "@/lib/api";
 import BookSearchBar from "@/components/BookSearchBar";
 import { GENRE_COLORS } from "@/lib/constants";
 
@@ -20,6 +21,10 @@ export default function PlaylistDetailPage() {
     }
   }, [authLoading, user, router]);
   const [showAddBook, setShowAddBook] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  const [nameValue, setNameValue] = useState("");
+  const [editingDesc, setEditingDesc] = useState(false);
+  const [descValue, setDescValue] = useState("");
 
   const playlistId = Number(params.id);
 
@@ -38,6 +43,26 @@ export default function PlaylistDetailPage() {
   const handleRemoveBook = async (bookId: string) => {
     await removeBook(playlistId, bookId);
     fetchPlaylist(playlistId);
+  };
+
+  const handleSaveName = async () => {
+    const trimmed = nameValue.trim();
+    if (!trimmed || trimmed === current?.name) { setEditingName(false); return; }
+    try {
+      await updatePlaylist(playlistId, { name: trimmed });
+      fetchPlaylist(playlistId);
+    } catch {}
+    setEditingName(false);
+  };
+
+  const handleSaveDesc = async () => {
+    const trimmed = descValue.trim();
+    if (trimmed === (current?.description || "")) { setEditingDesc(false); return; }
+    try {
+      await updatePlaylist(playlistId, { description: trimmed || undefined });
+      fetchPlaylist(playlistId);
+    } catch {}
+    setEditingDesc(false);
   };
 
   const handleDelete = async () => {
@@ -71,8 +96,26 @@ export default function PlaylistDetailPage() {
 
       <div className="mb-6">
         <div className="flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-primary">{current.name}</h1>
+          <div className="flex-1 min-w-0">
+            {editingName ? (
+              <input
+                autoFocus
+                value={nameValue}
+                onChange={(e) => setNameValue(e.target.value)}
+                onBlur={handleSaveName}
+                onKeyDown={(e) => { if (e.key === "Enter") handleSaveName(); if (e.key === "Escape") setEditingName(false); }}
+                className="text-2xl font-bold text-primary bg-transparent border-b-2 border-blue-500 outline-none w-full"
+              />
+            ) : (
+              <h1
+                className={`text-2xl font-bold text-primary ${isOwner ? "cursor-pointer hover:text-secondary transition" : ""}`}
+                onClick={() => { if (isOwner) { setNameValue(current.name); setEditingName(true); } }}
+                title={isOwner ? "Click to edit name" : undefined}
+              >
+                {current.name}
+                {isOwner && <span className="text-muted text-xs ml-2 font-normal">✎</span>}
+              </h1>
+            )}
             <p className="text-muted text-sm mt-1">by {current.username}</p>
           </div>
           <div className="flex items-center gap-2">
@@ -94,8 +137,26 @@ export default function PlaylistDetailPage() {
             )}
           </div>
         </div>
-        {current.description && (
-          <p className="text-muted text-sm mt-2">{current.description}</p>
+        {editingDesc ? (
+          <textarea
+            autoFocus
+            value={descValue}
+            onChange={(e) => setDescValue(e.target.value)}
+            onBlur={handleSaveDesc}
+            onKeyDown={(e) => { if (e.key === "Escape") setEditingDesc(false); }}
+            rows={2}
+            className="text-muted text-sm mt-2 w-full bg-transparent border border-line rounded-lg p-2 outline-none focus:border-blue-500"
+            placeholder="Add a description..."
+          />
+        ) : (
+          <p
+            className={`text-muted text-sm mt-2 ${isOwner ? "cursor-pointer hover:text-secondary transition" : ""}`}
+            onClick={() => { if (isOwner) { setDescValue(current.description || ""); setEditingDesc(true); } }}
+            title={isOwner ? "Click to edit description" : undefined}
+          >
+            {current.description || (isOwner ? "Add a description..." : "")}
+            {isOwner && !current.description && <span className="text-xs ml-1">✎</span>}
+          </p>
         )}
       </div>
 
