@@ -4,23 +4,49 @@ import Link from "next/link";
 import SimilarityGraph, { type SimilarityGraphHandle } from "./SimilarityGraph";
 import BookSearchBar from "./BookSearchBar";
 import { useGraph } from "@/hooks/useGraph";
+import { usePlaylists } from "@/hooks/usePlaylists";
+import { useAuth } from "@/context/AuthContext";
 import { networkLinks } from "@/lib/network";
 import { GENRE_COLORS } from "@/lib/constants";
+import { addBookToPlaylist } from "@/lib/api";
 import styles from "./DiscoveryWorkspace.module.css";
 
 export default function DiscoveryWorkspace({ bookId }: { bookId: string }) {
   const { graph, loading, error, loadGraph, expandNode, expanding } = useGraph();
+  const { user } = useAuth();
+  const { playlists, fetchPlaylists } = usePlaylists();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [allLinks, setAllLinks] = useState(false);
   const [topN, setTopN] = useState(20);
+  const [showPlaylistPicker, setShowPlaylistPicker] = useState(false);
+  const [addingToPlaylist, setAddingToPlaylist] = useState(false);
+  const [addedMessage, setAddedMessage] = useState<string | null>(null);
   const graphRef = useRef<SimilarityGraphHandle>(null);
   const panelRef = useRef<HTMLElement>(null);
   useEffect(() => { void loadGraph(bookId, topN); }, [bookId, topN, loadGraph]);
+  useEffect(() => { if (user) fetchPlaylists({ user_id: user.id }); }, [user, fetchPlaylists]);
+
+  async function handleAddToPlaylist(playlistId: number, playlistName: string, nodeBookId: string) {
+    setAddingToPlaylist(true);
+    try {
+      await addBookToPlaylist(playlistId, nodeBookId);
+      setAddedMessage(`Added to "${playlistName}"`);
+      setShowPlaylistPicker(false);
+      setTimeout(() => setAddedMessage(null), 3000);
+    } catch {
+      setAddedMessage("Already in that playlist");
+      setTimeout(() => setAddedMessage(null), 3000);
+    } finally {
+      setAddingToPlaylist(false);
+    }
+  }
   const edges = useMemo(() => graph ? networkLinks(graph, allLinks) : [], [graph, allLinks]);
   const books = useMemo(() => graph ? [graph.center_book, ...graph.nodes.filter(n => n.id !== graph.center_book.id)] : [], [graph]);
   const selected = books.find(book => book.id === selectedId);
   function selectBook(id: string | null) {
     setSelectedId(id);
+    setShowPlaylistPicker(false);
+    setAddedMessage(null);
     if (id && window.matchMedia("(max-width: 760px)").matches) {
       panelRef.current?.scrollIntoView({ block: "start", behavior: "auto" });
     }
@@ -66,6 +92,36 @@ export default function DiscoveryWorkspace({ bookId }: { bookId: string }) {
           <div className={styles.actions}>
             {selected.id !== bookId && <Link href={`/?book_id=${encodeURIComponent(selected.id)}`}>Start a map from this book ↗</Link>}
             <button disabled={expanding || loading} onClick={() => void expandNode(selected.id, books.map(book => book.id))}>{expanding ? "Finding connections…" : "Add its connections to this map"}</button>
+            {user && (
+              <div style={{ position: "relative" }}>
+                <button onClick={() => setShowPlaylistPicker(!showPlaylistPicker)}>
+                  {addedMessage || "Add to playlist"}
+                </button>
+                {showPlaylistPicker && (
+                  <div style={{ position: "absolute", bottom: "100%", left: 0, right: 0, marginBottom: 4, background: "rgb(var(--surface))", border: "1px solid rgb(var(--line))", borderRadius: 8, overflow: "hidden", zIndex: 10, maxHeight: 200, overflowY: "auto" }}>
+                    {playlists.length === 0 ? (
+                      <div style={{ padding: "12px 14px", fontSize: 11, color: "rgb(var(--muted))" }}>
+                        No playlists yet. <Link href="/playlists" style={{ color: "rgb(var(--link))" }}>Create one</Link>
+                      </div>
+                    ) : (
+                      playlists.map(p => (
+                        <button
+                          key={p.id}
+                          disabled={addingToPlaylist}
+                          onClick={() => handleAddToPlaylist(p.id, p.name, selected.id)}
+                          style={{ display: "block", width: "100%", textAlign: "left", padding: "10px 14px", fontSize: 12, borderBottom: "1px solid rgb(var(--line) / .5)", minHeight: 44 }}
+                          onMouseEnter={e => (e.currentTarget.style.background = "rgb(var(--raised))")}
+                          onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+                        >
+                          <span style={{ fontWeight: 500 }}>{p.name}</span>
+                          {p.genre && <span style={{ marginLeft: 8, fontSize: 10, color: "rgb(var(--muted))" }}>{p.genre}</span>}
+                        </button>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div> : <>
           <div className={styles.panelHeading}><p className={styles.eyebrow}>The reading trail</p><h2>Where will you go next?</h2><p>Select a book on the map or below.</p></div>
